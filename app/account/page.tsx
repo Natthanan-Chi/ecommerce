@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import {
-  Loader2,
   MapPin,
   MessageCircle,
   PackageCheck,
@@ -12,6 +11,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useAuth } from "../../components/AuthProvider";
+import { AccountSkeleton, CustomerErrorState } from "../../components/customer/LoadingAndErrorStates";
 import {
   fetchMyOrders,
   fetchMyReviews,
@@ -27,7 +27,9 @@ export default function AccountPage() {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [reviews, setReviews] = useState<AccountReview[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -35,17 +37,26 @@ export default function AccountPage() {
       if (isLoading || !user) return;
 
       setIsLoadingData(true);
-      setError(null);
+      setOrdersError(null);
+      setReviewsError(null);
 
-      Promise.all([fetchMyOrders(), fetchMyReviews(user.id)])
-        .then(([orderData, reviewData]) => {
-          if (!cancelled) {
-            setOrders(orderData);
-            setReviews(reviewData);
+      Promise.allSettled([fetchMyOrders(user.id), fetchMyReviews(user.id)])
+        .then(([orderResult, reviewResult]) => {
+          if (cancelled) return;
+
+          if (orderResult.status === "fulfilled") {
+            setOrders(orderResult.value);
+          } else {
+            setOrders([]);
+            setOrdersError(orderResult.reason?.message ?? "Unable to load orders.");
           }
-        })
-        .catch((err: Error) => {
-          if (!cancelled) setError(err.message ?? "Unable to load account data.");
+
+          if (reviewResult.status === "fulfilled") {
+            setReviews(reviewResult.value);
+          } else {
+            setReviews([]);
+            setReviewsError(reviewResult.reason?.message ?? "Unable to load reviews.");
+          }
         })
         .finally(() => {
           if (!cancelled) setIsLoadingData(false);
@@ -56,7 +67,7 @@ export default function AccountPage() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [isLoading, user]);
+  }, [isLoading, reloadKey, user]);
 
   const handleAskAboutOrder = (order: CustomerOrder) => {
     window.dispatchEvent(
@@ -71,9 +82,11 @@ export default function AccountPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-400">
-        <Loader2 className="w-7 h-7 animate-spin" />
-      </div>
+      <main className="min-h-screen bg-slate-50 px-4 py-8 dark:bg-slate-950 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
+          <AccountSkeleton />
+        </div>
+      </main>
     );
   }
 
@@ -132,23 +145,22 @@ export default function AccountPage() {
           </div>
         </section>
 
-        {error && (
-          <div className="mb-6 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-600 dark:text-red-300">
-            {error}
-          </div>
-        )}
-
         {isLoadingData ? (
-          <div className="flex items-center justify-center py-24 text-slate-400">
-            <Loader2 className="w-7 h-7 animate-spin" />
-          </div>
+          <AccountSkeleton />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <section className="lg:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6">
               <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-950 dark:text-white mb-4">
                 <PackageCheck className="w-5 h-5 text-brand-500" /> Orders
               </h2>
-              {orders.length === 0 ? (
+              {ordersError ? (
+                <CustomerErrorState
+                  title="Orders unavailable"
+                  message="Your order history could not be loaded right now."
+                  detail={ordersError}
+                  onAction={() => setReloadKey((current) => current + 1)}
+                />
+              ) : orders.length === 0 ? (
                 <p className="text-sm text-slate-500">No orders yet.</p>
               ) : (
                 <div className="space-y-4">
@@ -188,7 +200,14 @@ export default function AccountPage() {
                 <h2 className="flex items-center gap-2 text-lg font-extrabold text-slate-950 dark:text-white mb-4">
                   <Star className="w-5 h-5 text-amber-500" /> Reviews
                 </h2>
-                {reviews.length === 0 ? (
+                {reviewsError ? (
+                  <CustomerErrorState
+                    title="Reviews unavailable"
+                    message="Your reviews could not be loaded right now."
+                    detail={reviewsError}
+                    onAction={() => setReloadKey((current) => current + 1)}
+                  />
+                ) : reviews.length === 0 ? (
                   <p className="text-sm text-slate-500">No reviews yet.</p>
                 ) : (
                   <div className="space-y-4">

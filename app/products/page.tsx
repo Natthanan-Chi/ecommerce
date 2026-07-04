@@ -4,7 +4,8 @@ import React from "react";
 import Header from "../../components/Header";
 import Catalog from "../../components/Catalog";
 import StorefrontOverlays from "../../components/StorefrontOverlays";
-import { Layers3, Loader2, PackageCheck, SlidersHorizontal, Sparkles, Tag } from "lucide-react";
+import { Layers3, PackageCheck, SlidersHorizontal, Sparkles, Tag } from "lucide-react";
+import { CatalogSkeleton, CustomerErrorState } from "../../components/customer/LoadingAndErrorStates";
 import { useStorefront } from "../../hooks/useStorefront";
 
 export default function ProductsPage() {
@@ -93,14 +94,15 @@ export default function ProductsPage() {
         </section>
 
         {store.isLoadingProducts ? (
-          <div className="flex flex-col items-center justify-center py-32 text-slate-400 dark:text-slate-600">
-            <Loader2 className="w-10 h-10 animate-spin mb-3" />
-            <p className="text-sm font-medium">Loading products&hellip;</p>
-          </div>
+          <CatalogSkeleton showStats />
         ) : store.productsError ? (
-          <div className="flex flex-col items-center justify-center py-32 text-center">
-            <p className="text-red-500 font-semibold text-sm mb-2">Failed to load products</p>
-            <p className="text-slate-400 text-xs">{store.productsError}</p>
+          <div className="py-16">
+            <CustomerErrorState
+              title="Failed to load products"
+              message="The product list could not be loaded. Please retry the request."
+              detail={store.productsError}
+              onAction={() => void store.reloadProducts()}
+            />
           </div>
         ) : (
           <Catalog

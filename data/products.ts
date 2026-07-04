@@ -398,7 +398,7 @@ export async function fetchCurrentUserProfile(
   return data as UserProfile;
 }
 
-export async function fetchMyOrders(): Promise<CustomerOrder[]> {
+export async function fetchMyOrders(userId: string): Promise<CustomerOrder[]> {
   const { data, error } = await supabase
     .from("orders")
     .select(
@@ -425,6 +425,7 @@ export async function fetchMyOrders(): Promise<CustomerOrder[]> {
       )
     `
     )
+    .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (error) {

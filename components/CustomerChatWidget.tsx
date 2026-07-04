@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "./AuthProvider";
+import { ChatMessageSkeleton } from "./customer/LoadingAndErrorStates";
 import {
   fetchCustomerUnreadChatCount,
   fetchChatMessages,
@@ -315,9 +316,8 @@ export default function CustomerChatWidget() {
             <>
               <div className="h-80 overflow-y-auto bg-slate-50 p-4 dark:bg-slate-900/60">
                 {isBooting ? (
-                  <div className="flex h-full flex-col items-center justify-center text-slate-400">
-                    <Loader2 className="mb-2 h-6 w-6 animate-spin" />
-                    <p className="text-xs font-semibold">Loading chat</p>
+                  <div className="flex h-full flex-col justify-end">
+                    <ChatMessageSkeleton />
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center text-center">

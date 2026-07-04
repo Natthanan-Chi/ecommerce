@@ -149,7 +149,7 @@ export function useStorefront() {
       setIsLoadingOrders(true);
       setOrdersError(null);
 
-      void fetchMyOrders()
+      void fetchMyOrders(user.id)
         .then((data) => {
           if (!cancelled) {
             setOrders(
@@ -175,6 +175,22 @@ export function useStorefront() {
       clearTimeout(timer);
     };
   }, [displayName, isAuthLoading, user]);
+
+  const loadProducts = (options?: { silent?: boolean }) => {
+    if (!options?.silent) setIsLoadingProducts(true);
+    setProductsError(null);
+
+    return fetchProducts()
+      .then((data) => {
+        setProducts(data);
+      })
+      .catch((err: Error) => {
+        setProductsError(err.message ?? "Failed to load products");
+      })
+      .finally(() => {
+        if (!options?.silent) setIsLoadingProducts(false);
+      });
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -426,6 +442,7 @@ export function useStorefront() {
     products,
     isLoadingProducts,
     productsError,
+    reloadProducts: loadProducts,
     activeCategory,
     setActiveCategory,
     searchQuery,

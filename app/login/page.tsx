@@ -6,6 +6,7 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { ArrowLeft, Loader2, Mail, ShieldCheck, Sparkles, UserCircle } from "lucide-react";
 import { useAuth } from "../../components/AuthProvider";
+import { AuthPanelSkeleton } from "../../components/customer/LoadingAndErrorStates";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -95,10 +96,7 @@ export default function LoginPage() {
           </div>
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-10 text-slate-500 gap-2">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-sm font-medium">Checking session...</span>
-            </div>
+            <AuthPanelSkeleton />
           ) : user ? (
             <div className="space-y-4">
               <div className="flex items-center gap-3 rounded-xl border border-green-200 dark:border-green-900 bg-green-50 dark:bg-green-950/30 p-4">
