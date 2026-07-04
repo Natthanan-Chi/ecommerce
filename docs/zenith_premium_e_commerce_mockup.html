@@ -1,0 +1,1684 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zenith Modern E-Commerce Experience</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons via CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* Custom scrollbar for premium touch */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .dark ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col antialiased">
+
+    <!-- Navigation Header -->
+    <header class="sticky top-0 z-40 w-full backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 transition-colors">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <a href="#" onclick="resetFilters(); return false;" class="flex items-center space-x-2 text-brand-600 dark:text-brand-500">
+                <i data-lucide="sparkles" class="w-8 h-8 animate-pulse"></i>
+                <span class="text-xl font-bold tracking-tight bg-gradient-to-r from-brand-600 to-indigo-500 bg-clip-text text-transparent">ZENITH</span>
+            </a>
+
+            <!-- Search Bar (Desktop) -->
+            <div class="hidden md:flex flex-1 max-w-md mx-8 relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i data-lucide="search" class="h-5 w-5 text-slate-400"></i>
+                </div>
+                <input type="text" id="desktop-search" oninput="handleSearch(this.value)" placeholder="Search for premium goods..." class="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm transition-all dark:placeholder-slate-400" />
+            </div>
+
+            <!-- Header Utilities -->
+            <div class="flex items-center space-x-4">
+                <!-- Theme Toggle -->
+                <button onclick="toggleTheme()" class="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition" aria-label="Toggle Dark Mode">
+                    <i id="theme-icon" data-lucide="moon" class="w-5 h-5"></i>
+                </button>
+
+                <!-- Order History Trigger -->
+                <button onclick="openOrderHistoryModal()" class="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition relative" aria-label="View Order History">
+                    <i data-lucide="receipt" class="w-5 h-5"></i>
+                    <span id="order-history-badge" class="hidden absolute top-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full"></span>
+                </button>
+
+                <!-- Cart Toggle -->
+                <button onclick="toggleCartDrawer()" class="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition relative" aria-label="Shopping Cart">
+                    <i data-lucide="shopping-bag" class="w-5 h-5"></i>
+                    <span id="cart-badge" class="hidden absolute -top-1 -right-1 bg-brand-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full scale-90">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Search/Category Helper Bar -->
+    <div class="md:hidden sticky top-16 z-30 bg-white/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex space-x-2 backdrop-blur-md">
+        <div class="flex-1 relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i data-lucide="search" class="h-4 w-4 text-slate-400"></i>
+            </div>
+            <input type="text" id="mobile-search" oninput="handleSearch(this.value)" placeholder="Search products..." class="w-full pl-9 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500 text-xs transition-all dark:placeholder-slate-400" />
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- Hero Section -->
+        <section id="hero-banner" class="relative rounded-3xl overflow-hidden mb-10 bg-gradient-to-r from-slate-900 via-brand-950 to-indigo-950 text-white min-h-[320px] sm:min-h-[400px] flex items-center px-6 sm:px-12 md:px-16 py-12 shadow-xl border border-slate-800">
+            <!-- Background Accent SVGs -->
+            <div class="absolute right-0 top-0 bottom-0 opacity-20 pointer-events-none overflow-hidden select-none">
+                <svg width="450" height="400" viewBox="0 0 450 400" fill="none" class="h-full w-auto">
+                    <circle cx="250" cy="150" r="150" stroke="url(#paint0_linear)" stroke-width="40" stroke-dasharray="10 20"/>
+                    <defs>
+                        <linearGradient id="paint0_linear" x1="100" y1="0" x2="400" y2="300" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#6366f1"/>
+                            <stop offset="1" stop-color="#4f46e5" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            
+            <div class="relative z-10 max-w-xl">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-brand-500/10 text-brand-300 border border-brand-500/20 mb-4 animate-bounce">
+                    🚀 Summer Sale: 20% off with code "ZENITH20"
+                </span>
+                <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">
+                    Upgrade Your Daily Lifestyle Essentials.
+                </h1>
+                <p class="text-slate-300 text-sm sm:text-base mb-8 max-w-md leading-relaxed">
+                    Meticulously engineered products crafted with premium materials. Unleash peak productivity, ultimate comfort, and minimal aesthetics today.
+                </p>
+                <div class="flex flex-wrap gap-4">
+                    <button onclick="scrollToGrid()" class="px-6 py-3 rounded-full bg-brand-600 hover:bg-brand-500 text-white font-semibold shadow-lg hover:shadow-brand-500/20 hover:-translate-y-0.5 transition flex items-center gap-2">
+                        <span>Shop Catalog</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                    <button onclick="filterCategory('Electronics')" class="px-6 py-3 rounded-full bg-white/10 hover:bg-white/15 text-white font-medium backdrop-blur border border-white/10 hover:-translate-y-0.5 transition">
+                        Explore Electronics
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Category Pill Bar & Sorting controls -->
+        <section id="catalog-controls" class="mb-8">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-slate-200 dark:border-slate-800 pb-5">
+                <!-- Categories -->
+                <div class="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-none" id="category-pills">
+                    <!-- Loaded dynamically via JavaScript -->
+                </div>
+
+                <!-- Sorting & Metrics -->
+                <div class="flex items-center justify-between md:justify-end gap-4">
+                    <span id="results-count" class="text-xs text-slate-500 dark:text-slate-400 font-medium">Showing 0 products</span>
+                    
+                    <div class="relative inline-block text-left">
+                        <select id="sort-select" onchange="handleSort(this.value)" class="appearance-none pl-4 pr-10 py-2 text-xs font-semibold rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer">
+                            <option value="featured">Sort: Featured</option>
+                            <option value="price-low">Price: Low to High</option>
+                            <option value="price-high">Price: High to Low</option>
+                            <option value="rating">Top Rated</option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Product Grid Section -->
+        <section id="catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <!-- Core products will inject here via Javascript -->
+        </section>
+
+        <!-- Empty State Container -->
+        <section id="empty-state" class="hidden flex-col items-center justify-center py-20 text-center">
+            <div class="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 mb-4">
+                <i data-lucide="package-search" class="w-12 h-12"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-700 dark:text-slate-300">No products match your filters</h3>
+            <p class="text-slate-500 dark:text-slate-400 text-sm max-w-sm mt-1">Try resetting your search query or selecting a different category from above.</p>
+            <button onclick="resetFilters()" class="mt-4 px-5 py-2 rounded-full bg-brand-600 hover:bg-brand-500 text-white font-medium text-xs transition">
+                Reset All Filters
+            </button>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 transition-colors">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="md:col-span-2">
+                    <div class="flex items-center space-x-2 text-brand-600 dark:text-brand-500 mb-4">
+                        <i data-lucide="sparkles" class="w-6 h-6"></i>
+                        <span class="text-lg font-bold tracking-tight">ZENITH STORE</span>
+                    </div>
+                    <p class="text-slate-500 dark:text-slate-400 text-sm max-w-sm leading-relaxed mb-4">
+                        A futuristic retail conceptual mockup offering a hyper-fluid buyer interface, dynamic real-time catalog generation, review systems, and realistic checkout pipelines.
+                    </p>
+                    <p class="text-slate-400 dark:text-slate-500 text-xs">
+                        &copy; 2026 Zenith Concepts. Built for modern high-performant web interfaces.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold tracking-wider text-slate-900 dark:text-white mb-4 uppercase">Technology Stack</h4>
+                    <ul class="space-y-2 text-xs text-slate-500 dark:text-slate-400">
+                        <li>Tailwind CSS</li>
+                        <li>Pure ES6 Javascript State Engine</li>
+                        <li>Lucide Vector Icons</li>
+                        <li>High Fidelity Micro-interactions</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold tracking-wider text-slate-900 dark:text-white mb-4 uppercase">Demo Support</h4>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+                        You can dynamically test adding products, viewing complex nested reviews, submitting real-time user-generated product ratings, running complete simulated billing procedures, and viewing receipts.
+                    </p>
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300">
+                            Demo Mode Active
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Product Detail Modal (Overlay) -->
+    <div id="detail-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity" onclick="closeProductDetail()"></div>
+
+        <div class="flex min-h-screen items-center justify-center p-4 sm:p-6 lg:p-8">
+            <div class="relative w-full max-w-5xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row overflow-hidden transition-all duration-300 transform scale-95 opacity-0" id="detail-card">
+                <!-- Close Button -->
+                <button onclick="closeProductDetail()" class="absolute top-4 right-4 z-10 p-2 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 shadow hover:scale-105 transition" aria-label="Close Details">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+
+                <!-- Left Column: Product Gallery -->
+                <div class="w-full md:w-1/2 bg-slate-50 dark:bg-slate-950/50 p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800">
+                    <div class="flex-1 flex items-center justify-center min-h-[250px] sm:min-h-[350px]">
+                        <img id="modal-main-image" src="" alt="Main Product" onerror="this.src='https://placehold.co/600x600/6366f1/ffffff?text=Image+Unavailable'" class="max-h-[350px] object-contain rounded-xl hover:scale-105 transition duration-300">
+                    </div>
+                    <!-- Thumbnails dynamic grid -->
+                    <div id="modal-thumbnails-grid" class="flex gap-2.5 mt-4 overflow-x-auto justify-center py-2">
+                        <!-- Filled by JS -->
+                    </div>
+                </div>
+
+                <!-- Right Column: Info, Purchase Actions, Reviews tabs -->
+                <div class="w-full md:w-1/2 p-6 sm:p-8 flex flex-col max-h-[85vh] md:max-h-[80vh] overflow-y-auto">
+                    <!-- Basic details -->
+                    <span id="modal-category" class="text-xs font-bold tracking-wider text-brand-600 dark:text-brand-400 uppercase">Category</span>
+                    <h2 id="modal-title" class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white mt-1 mb-2">Product Title</h2>
+                    
+                    <!-- Rating Summary -->
+                    <div class="flex items-center gap-2 mb-4">
+                        <div id="modal-stars" class="flex items-center text-amber-400">
+                            <!-- Filled dynamically -->
+                        </div>
+                        <span id="modal-rating-avg" class="text-sm font-bold text-slate-800 dark:text-slate-200">4.8</span>
+                        <span id="modal-rating-count" class="text-xs text-slate-500 dark:text-slate-400">(42 Reviews)</span>
+                    </div>
+
+                    <!-- Price Block -->
+                    <div class="flex items-baseline gap-3 mb-6">
+                        <span id="modal-current-price" class="text-3xl font-extrabold text-brand-600 dark:text-brand-400">$299.99</span>
+                        <span id="modal-original-price" class="text-base text-slate-400 dark:text-slate-600 line-through font-medium">$350.00</span>
+                    </div>
+
+                    <!-- Description -->
+                    <p id="modal-desc" class="text-slate-600 dark:text-slate-300 text-sm leading-relaxed mb-6">Excellent details about high fidelity product features...</p>
+
+                    <!-- Quantity Selector & Add button -->
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="flex items-center border border-slate-200 dark:border-slate-700 rounded-full py-1.5 px-3 bg-slate-50 dark:bg-slate-800">
+                            <button onclick="adjustDetailQty(-1)" class="p-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition">
+                                <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <span id="modal-qty-display" class="w-10 text-center text-sm font-semibold">1</span>
+                            <button onclick="adjustDetailQty(1)" class="p-1 text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        <button id="modal-add-cart-btn" class="flex-1 py-3 px-6 rounded-full bg-brand-600 hover:bg-brand-500 active:scale-[0.98] text-white font-semibold text-sm transition shadow-lg shadow-brand-500/10 flex items-center justify-center gap-2">
+                            <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                            <span>Add To Bag</span>
+                        </button>
+                    </div>
+
+                    <!-- Tab Switcher (Product Specs vs Reviews) -->
+                    <div class="border-b border-slate-200 dark:border-slate-800 mb-4 flex gap-4 text-sm font-medium">
+                        <button onclick="switchTab('specs')" id="tab-specs-btn" class="border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 pb-2 transition">
+                            Specifications
+                        </button>
+                        <button onclick="switchTab('reviews')" id="tab-reviews-btn" class="border-b-2 border-transparent text-slate-500 dark:text-slate-400 pb-2 hover:text-slate-700 dark:hover:text-slate-200 transition flex items-center gap-1.5">
+                            Customer Reviews <span id="tab-review-badge" class="bg-slate-100 dark:bg-slate-800 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                        </button>
+                    </div>
+
+                    <!-- Specifications Section -->
+                    <div id="tab-specs-content" class="space-y-3 mb-6">
+                        <div class="grid grid-cols-3 text-xs border-b border-slate-100 dark:border-slate-800 pb-2">
+                            <span class="text-slate-500 font-medium">Warranty</span>
+                            <span class="col-span-2 text-slate-800 dark:text-slate-200 font-semibold" id="spec-warranty">2-Year Limited Warranty</span>
+                        </div>
+                        <div class="grid grid-cols-3 text-xs border-b border-slate-100 dark:border-slate-800 pb-2">
+                            <span class="text-slate-500 font-medium">Materials</span>
+                            <span class="col-span-2 text-slate-800 dark:text-slate-200 font-semibold" id="spec-materials">Premium Recycled Polycarbonate</span>
+                        </div>
+                        <div class="grid grid-cols-3 text-xs border-b border-slate-100 dark:border-slate-800 pb-2">
+                            <span class="text-slate-500 font-medium">Dimensions</span>
+                            <span class="col-span-2 text-slate-800 dark:text-slate-200 font-semibold" id="spec-dimensions">Optimal Standard Size</span>
+                        </div>
+                    </div>
+
+                    <!-- Reviews Section (List + Add Review Form) -->
+                    <div id="tab-reviews-content" class="hidden space-y-6 mb-6">
+                        <!-- Add Review Container -->
+                        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
+                            <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase mb-3 flex items-center gap-1">
+                                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Add Your Review
+                            </h4>
+                            
+                            <!-- Star selector -->
+                            <div class="flex items-center gap-1 mb-3">
+                                <span class="text-xs text-slate-500 mr-2">Your Rating:</span>
+                                <div class="flex items-center gap-0.5 text-slate-300">
+                                    <button onclick="setReviewRating(1)" class="review-star-btn hover:scale-110 transition"><i data-lucide="star" class="w-5 h-5"></i></button>
+                                    <button onclick="setReviewRating(2)" class="review-star-btn hover:scale-110 transition"><i data-lucide="star" class="w-5 h-5"></i></button>
+                                    <button onclick="setReviewRating(3)" class="review-star-btn hover:scale-110 transition"><i data-lucide="star" class="w-5 h-5"></i></button>
+                                    <button onclick="setReviewRating(4)" class="review-star-btn hover:scale-110 transition"><i data-lucide="star" class="w-5 h-5"></i></button>
+                                    <button onclick="setReviewRating(5)" class="review-star-btn hover:scale-110 transition"><i data-lucide="star" class="w-5 h-5"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Comment inputs -->
+                            <div class="space-y-2 mb-3">
+                                <input type="text" id="review-author" placeholder="Your name (e.g. Liam S.)" class="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                                <textarea id="review-comment" rows="2" placeholder="Tell other buyers about your experience..." class="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-500"></textarea>
+                            </div>
+
+                            <button onclick="submitReview()" class="w-full py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5">
+                                <i data-lucide="send" class="w-3 h-3"></i> Submit Review
+                            </button>
+                        </div>
+
+                        <!-- Existing reviews display -->
+                        <div id="reviews-list" class="space-y-4 max-h-[250px] overflow-y-auto pr-1">
+                            <!-- Populated with javascript -->
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shopping Cart Slide-out Drawer -->
+    <div id="cart-drawer" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-950/50 backdrop-blur-xs transition-opacity" onclick="toggleCartDrawer()"></div>
+
+        <!-- Sliding panel container -->
+        <div class="fixed inset-y-0 right-0 max-w-md w-full flex pl-10">
+            <!-- Panel Content -->
+            <div id="cart-panel" class="w-full bg-white dark:bg-slate-900 h-full flex flex-col shadow-2xl border-l border-slate-200 dark:border-slate-800 translate-x-full transition-transform duration-300">
+                <!-- Header -->
+                <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-slate-900 dark:text-white">
+                        <i data-lucide="shopping-bag" class="w-5 h-5 text-brand-600 dark:text-brand-400"></i>
+                        <h2 class="text-lg font-extrabold">Your Bag</h2>
+                        <span id="cart-drawer-count" class="bg-slate-100 dark:bg-slate-800 text-xs px-2.5 py-0.5 rounded-full font-bold">0 Items</span>
+                    </div>
+                    <button onclick="toggleCartDrawer()" class="p-1.5 rounded-full text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition" aria-label="Close Cart">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <!-- Products list -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-4" id="cart-items-container">
+                    <!-- Loaded dynamically via JS -->
+                </div>
+
+                <!-- Footer Summary (Price calculations) -->
+                <div class="p-6 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 space-y-4">
+                    <!-- Coupon code option -->
+                    <div>
+                        <div class="flex gap-2">
+                            <input type="text" id="promo-input" placeholder="Coupon Code (ZENITH20)" class="flex-1 text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 uppercase placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            <button onclick="applyPromoCode()" class="px-4 py-2 bg-slate-900 dark:bg-slate-800 text-white hover:bg-slate-800 text-xs font-bold rounded-lg transition">Apply</button>
+                        </div>
+                        <p id="promo-msg" class="text-[11px] mt-1 hidden font-semibold"></p>
+                    </div>
+
+                    <!-- Price rows -->
+                    <div class="space-y-2 text-xs">
+                        <div class="flex justify-between text-slate-500 dark:text-slate-400">
+                            <span>Subtotal</span>
+                            <span id="cart-subtotal" class="font-semibold text-slate-900 dark:text-white">$0.00</span>
+                        </div>
+                        <div id="promo-discount-row" class="hidden flex justify-between text-green-600 dark:text-green-400 font-semibold">
+                            <span>Discount (Promo Code)</span>
+                            <span id="cart-discount">-$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-slate-500 dark:text-slate-400">
+                            <span>Shipping (Simulated)</span>
+                            <span id="cart-shipping" class="font-semibold text-slate-900 dark:text-white">FREE</span>
+                        </div>
+                        <div class="flex justify-between text-slate-500 dark:text-slate-400">
+                            <span>Estimated Tax</span>
+                            <span id="cart-tax" class="font-semibold text-slate-900 dark:text-white">$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-base font-extrabold border-t border-slate-200 dark:border-slate-800 pt-3 text-slate-900 dark:text-white">
+                            <span>Total Due</span>
+                            <span id="cart-total">$0.00</span>
+                        </div>
+                    </div>
+
+                    <button id="checkout-btn" onclick="openCheckoutModal()" class="w-full py-3 bg-brand-600 hover:bg-brand-500 active:scale-[0.99] text-white rounded-full font-bold text-sm shadow-lg shadow-brand-500/10 transition flex items-center justify-center gap-2">
+                        <span>Proceed to Secure Checkout</span>
+                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Checkout Modal -->
+    <div id="checkout-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity" onclick="closeCheckoutModal()"></div>
+
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div id="checkout-card" class="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row overflow-hidden transform scale-95 opacity-0 transition-all duration-300">
+                <!-- Close Button -->
+                <button onclick="closeCheckoutModal()" class="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-850 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+
+                <!-- Left Column Checkout Form -->
+                <div class="w-full md:w-3/5 p-6 sm:p-8">
+                    <h3 class="text-lg font-extrabold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
+                        <i data-lucide="truck" class="w-5 h-5 text-brand-600"></i> Shipping Details
+                    </h3>
+
+                    <form id="checkout-form" onsubmit="processCheckout(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Full Name</label>
+                            <input type="text" required id="ship-name" placeholder="John Doe" class="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Email Address</label>
+                            <input type="email" required id="ship-email" placeholder="john@example.com" class="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Street Address</label>
+                            <input type="text" required id="ship-address" placeholder="123 Design Blvd" class="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">City</label>
+                                <input type="text" required id="ship-city" placeholder="San Francisco" class="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Zip Code</label>
+                                <input type="text" required id="ship-zip" placeholder="94103" class="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            </div>
+                        </div>
+
+                        <!-- Payment Mockup Segment -->
+                        <div class="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                            <h4 class="text-xs font-bold text-slate-900 dark:text-white uppercase flex items-center gap-1.5 mb-2">
+                                <i data-lucide="credit-card" class="w-4 h-4 text-brand-500"></i> Dummy Payment Info
+                            </h4>
+                            <div class="relative">
+                                <input type="text" required id="card-num" placeholder="4111 2222 3333 4444" class="w-full text-xs pl-3 pr-10 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                                <span class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400">
+                                    <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+                                </span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="text" required id="card-exp" placeholder="MM/YY" class="text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                                <input type="password" required id="card-cvv" placeholder="CVV" maxlength="4" class="text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            </div>
+                        </div>
+
+                        <button type="submit" id="submit-checkout-btn" class="w-full mt-4 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs rounded-lg transition shadow-lg shadow-indigo-500/10 flex items-center justify-center gap-2">
+                            <span>Place Dummy Order</span>
+                            <i data-lucide="check-circle" class="w-4.5 h-4.5"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right Column Summary -->
+                <div class="w-full md:w-2/5 bg-slate-50 dark:bg-slate-950 p-6 flex flex-col justify-between border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800">
+                    <div>
+                        <h4 class="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase mb-4 tracking-wider">Order Items</h4>
+                        <div id="checkout-summary-items" class="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                            <!-- JS populated -->
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-200 dark:border-slate-800 mt-4 space-y-2">
+                        <div class="flex justify-between text-xs text-slate-500">
+                            <span>Subtotal</span>
+                            <span id="chk-subtotal" class="font-bold text-slate-700 dark:text-slate-300">$0.00</span>
+                        </div>
+                        <div id="chk-disc-row" class="hidden flex justify-between text-xs text-green-600">
+                            <span>Discount</span>
+                            <span id="chk-disc">-$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-500">
+                            <span>Tax</span>
+                            <span id="chk-tax" class="font-bold text-slate-700 dark:text-slate-300">$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-sm font-extrabold text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-800">
+                            <span>Final Total</span>
+                            <span id="chk-total">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Success Receipt Modal -->
+    <div id="success-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-md transition-opacity"></div>
+
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div id="success-card" class="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 text-center transform scale-95 opacity-0 transition-all duration-300">
+                
+                <!-- Success icon circle -->
+                <div class="w-16 h-16 bg-green-500/10 text-green-500 rounded-full mx-auto flex items-center justify-center mb-4">
+                    <i data-lucide="check" class="w-8 h-8"></i>
+                </div>
+
+                <h3 class="text-2xl font-extrabold text-slate-900 dark:text-white">Order Confirmed!</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Thank you for shopping. Below is your generated mockup receipt.</p>
+
+                <!-- Receipt -->
+                <div class="my-6 p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-left space-y-3">
+                    <div class="flex justify-between text-[11px] text-slate-400 font-semibold uppercase">
+                        <span>Receipt ID</span>
+                        <span id="receipt-id">#ZN-98421</span>
+                    </div>
+                    <div class="flex justify-between text-[11px] text-slate-400 font-semibold uppercase border-b border-slate-200 dark:border-slate-800 pb-2">
+                        <span>Date</span>
+                        <span id="receipt-date">July 4, 2026</span>
+                    </div>
+
+                    <!-- Items List inside Receipt -->
+                    <div id="receipt-items" class="space-y-1.5 text-xs max-h-[120px] overflow-y-auto pr-1">
+                        <!-- Filled by JS -->
+                    </div>
+
+                    <div class="border-t border-slate-200 dark:border-slate-800 pt-2 space-y-1 text-xs">
+                        <div class="flex justify-between text-slate-500">
+                            <span>Ship To</span>
+                            <span id="receipt-recipient" class="font-bold text-slate-800 dark:text-slate-200">John Doe</span>
+                        </div>
+                        <div class="flex justify-between text-slate-500">
+                            <span>Subtotal</span>
+                            <span id="receipt-subtotal" class="font-bold text-slate-800 dark:text-slate-200">$0.00</span>
+                        </div>
+                        <div class="flex justify-between font-extrabold text-slate-900 dark:text-white text-sm pt-1 border-t border-slate-200 dark:border-slate-800">
+                            <span>Paid Total</span>
+                            <span id="receipt-total">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="closeSuccessModal()" class="flex-1 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold text-xs rounded-full transition">
+                        Continue Shopping
+                    </button>
+                    <button onclick="copyReceiptToClipboard()" class="p-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition text-slate-600 dark:text-slate-300" title="Copy Invoice Details">
+                        <i data-lucide="copy" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order History Modal -->
+    <div id="history-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity" onclick="closeOrderHistoryModal()"></div>
+
+        <div class="flex min-h-screen items-center justify-center p-4">
+            <div id="history-card" class="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6 border border-slate-200 dark:border-slate-800 transform scale-95 opacity-0 transition-all duration-300">
+                <button onclick="closeOrderHistoryModal()" class="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-850 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+
+                <h3 class="text-xl font-extrabold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                    <i data-lucide="receipt" class="w-5 h-5 text-green-500"></i> Your Purchase History
+                </h3>
+                
+                <div id="history-list" class="space-y-4 max-h-[350px] overflow-y-auto pr-1">
+                    <!-- Populated by dynamic Javascript orders array -->
+                </div>
+
+                <div id="history-empty" class="hidden flex flex-col items-center justify-center py-8 text-center">
+                    <i data-lucide="folder-open" class="w-10 h-10 text-slate-300 dark:text-slate-700 mb-2"></i>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">You haven't purchased anything in this session yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Toast Notification Box -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 flex items-center gap-3 bg-slate-900 dark:bg-white text-white dark:text-slate-950 px-4 py-3 rounded-xl shadow-2xl translate-y-10 opacity-0 transition-all duration-300 pointer-events-none">
+        <div id="toast-icon-box" class="p-1 rounded-full text-brand-400 dark:text-brand-600">
+            <i data-lucide="info" class="w-5 h-5" id="toast-icon"></i>
+        </div>
+        <div>
+            <p id="toast-msg" class="text-xs font-bold">Item successfully processed</p>
+        </div>
+    </div>
+
+    <script>
+        // Core Mock Catalog Array containing 8 highly specialized product specifications
+        let products = [
+            {
+                id: 1,
+                title: "AeroSound Max",
+                category: "Electronics",
+                price: 299.99,
+                originalPrice: 349.99,
+                description: "Experience absolute acoustical tranquility. The AeroSound Max headphones features top-tier hybrid active noise cancellation, custom responsive dynamic audio diaphragms, 45 hours of heavy-duty continuous playback, and ultra-ergonomic protein leather earmuffs.",
+                mainImage: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=600&h=600&q=80",
+                alternateImages: [
+                    "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=300&h=300&q=80",
+                    "https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=300&h=300&q=80"
+                ],
+                rating: 4.8,
+                specs: {
+                    warranty: "2-Year Manufacturer Warranty",
+                    materials: "Recycled aluminum and memory foam",
+                    dimensions: "186mm x 165mm x 80mm"
+                },
+                reviews: [
+                    { author: "Alex Mercer", rating: 5, date: "2026-06-15", comment: "The soundstage is wide and active noise isolation works perfect on my flights!" },
+                    { author: "Sarah Connor", rating: 4, date: "2026-06-11", comment: "Comfortable over several continuous hours of work. Strong battery." }
+                ]
+            },
+            {
+                id: 2,
+                title: "Chronos Mesh Minimalist",
+                category: "Fashion",
+                price: 149.00,
+                originalPrice: 199.00,
+                description: "A signature modern look that defines sophistication. Featuring high-precision Swiss movement architecture, dynamic mineral glass lens housing, and a bespoke surgical-grade stainless steel mesh strap that is fully self-adjustable.",
+                mainImage: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&h=600&q=80",
+                alternateImages: [
+                    "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?auto=format&fit=crop&w=300&h=300&q=80"
+                ],
+                rating: 4.5,
+                specs: {
+                    warranty: "1-Year Warranty",
+                    materials: "316L Surgical Stainless Steel",
+                    dimensions: "40mm dial width, 8mm thickness"
+                },
+                reviews: [
+                    { author: "Evelyn K.", rating: 5, date: "2026-05-30", comment: "Super sleek look, looks extremely rich under soft warm lighting." }
+                ]
+            },
+            {
+                id: 3,
+                title: "Lumina Smart Ambient Lamp",
+                category: "Home",
+                price: 79.50,
+                originalPrice: 99.00,
+                description: "Transform your surrounding workspace into custom ambient zones. Outfitted with comprehensive smart home hub integrations, dynamic RGB gradient transition animations, custom schedule configurations, and voice assistant trigger arrays.",
+                mainImage: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=600&h=600&q=80",
+                alternateImages: [
+                    "https://images.unsplash.com/photo-1565814636199-ae8133055c1c?auto=format&fit=crop&w=300&h=300&q=80"
+                ],
+                rating: 4.2,
+                specs: {
+                    warranty: "1-Year Smart Protection",
+                    materials: "Satin-brushed polymers",
+                    dimensions: "220mm Height, 90mm Diameter"
+                },
+                reviews: [
+                    { author: "Daniel H.", rating: 4, date: "2026-06-02", comment: "Syncs instantly with my Google Home configuration. Great visual depth." }
+                ]
+            },
+            {
+                id: 4,
+                title: "Terra Organic Cotton Hoodie",
+                category: "Fashion",
+                price: 59.00,
+                originalPrice: 75.00,
+                description: "Luxurious comfort crafted sustainably. Made using 100% GOTS-certified heavyweight organic cotton. Double-lined cozy hood, robust heavy metallic aglets, and dropped shoulder seam detailing for optimal streetwear silhouette structures.",
+                mainImage: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=600&h=600&q=80",
+                alternateImages: [
+                    "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=300&h=300&q=80"
+                ],
+                rating: 4.7,
+                specs: {
+                    warranty: "Lifetime stitch guarantee",
+                    materials: "100% Certified Organic Cotton (420 GSM)",
+                    dimensions: "True-to-size boxy modern cut"
+                },
+                reviews: [
+                    { author: "Marcus V.", rating: 5, date: "2026-06-21", comment: "Insanely thick fabric. Feels incredibly high quality compared to fast fashion." }
+                ]
+            },
+            {
+                id: 5,
+                title: "Zenith Mechanical Keyboard",
+                category: "Electronics",
+                price: 189.99,
+                originalPrice: 220.00,
+                description: "Elevate your typing acoustics. Built with dynamic linear hot-swappable switches, genuine premium walnut wood integrated wrist support base, double-shot PBT custom profile keycaps, and custom dynamic multi-zone backlight layouts.",
+                mainImage: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&h=600&q=80",
+                alternateImages: [
+                    "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?auto=format&fit=crop&w=300&h=300&q=80"
+                ],
+                rating: 4.9,
+                specs: {
+                    warranty: "2-Year Limited Warranty",
+                    materials: "Solid walnut wood housing, PBT keycaps",
+                    dimensions: "320mm x 115mm x 35mm"
+                },
+                reviews: [
+                    { author: "Code Master", rating: 5, date: "2026-06-18", comment: "The stock stabilization and lubing is incredible. Deep acoustic 'thock' sounds." }
+                ]
+            },
+            {
+                id: 6,
+                title: "Apex Carbon Active Sneakers",
+                category: "Fashion",
+                price: 120.00,
+                originalPrice: 150.00,
+                description: "Lighter than air, designed for maximum kinetic response. Integrating custom dual-density EVA high-rebound compound midsoles and fully engineered breathable mesh outer skins that form-fit directly onto your feet contours.",
+                mainImage: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=600&h=600&q=80",
+                alternateImages: [
+                    "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?auto=format&fit=crop&w=300&h=300&q=80"
+                ],
+                rating: 4.6,
+                specs: {
+                    warranty: "6-Month performance guarantee",
+                    materials: "Woven nylon fibers and Carbon Fiber insole",
+                    dimensions: "Standard men's and women's scaling"
+                },
+                reviews: [
+                    { author: "Runner Girl", rating: 4, date: "2026-04-10", comment: "Very snappy spring action on roads. Great arch support." }
+                ]
+            },
+            {
+                id: 7,
+                title: "Vibe Insulated Flask",
+                category: "Home",
+                price: 34.99,
+                originalPrice: 42.00,
+                description: "Keep cold beverages icy chill for up to 36 hours. Engineered with dual-wall food-grade stainless vacuum technologies. Durable exterior powder-coat finishes that guarantee premium grippy holds and anti-sweat performances.",
+                mainImage: "https://images.unsplash.com/photo-1602143407151-7111542de6e8?auto=format&fit=crop&w=600&h=600&q=80",
+                alternateImages: [
+                    "https://images.unsplash.com/photo-1523362628745-0c100150b504?auto=format&fit=crop&w=300&h=300&q=80"
+                ],
+                rating: 4.4,
+                specs: {
+                    warranty: "Lifetime warranty on vacuum leaks",
+                    materials: "18/8 Pro-Grade Stainless Steel",
+                    dimensions: "950ml capacity"
+                },
+                reviews: [
+                    { author: "Hiker Joe", rating: 5, date: "2026-05-15", comment: "Survived falling down a rocky slope and kept my water ice cold for 2 days!" }
+                ]
+            },
+            {
+                id: 8,
+                title: "Sentry RFID Leather Wallet",
+                category: "Fashion",
+                price: 45.00,
+                originalPrice: 55.00,
+                description: "High security meets minimalist lifestyle profiles. Outfitted with high-potency integrated Faraday cage RFID-blocking fabrics. Holds up to 8 cards and paper currency inside an elegant matte full grain leather construction.",
+                mainImage: "https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=600&h=600&q=80",
+                alternateImages: [
+                    "https://images.unsplash.com/photo-1588444839799-beca81d4efe9?auto=format&fit=crop&w=300&h=300&q=80"
+                ],
+                rating: 4.3,
+                specs: {
+                    warranty: "5-Year Leather degradation warranty",
+                    materials: "Full grain vegetable-tanned leather",
+                    dimensions: "100mm x 65mm x 12mm"
+                },
+                reviews: [
+                    { author: "Clara S.", rating: 4, date: "2026-06-29", comment: "Holds everything tightly. Minimal pocket bulge. Elegant texture." }
+                ]
+            }
+        ];
+
+        // State variables
+        let cart = [];
+        let orders = [];
+        let activeCategory = "All";
+        let searchQuery = "";
+        let sortOption = "featured";
+        let currentDetailProduct = null;
+        let selectedReviewRating = 0;
+        let currentDetailTab = "specs";
+        let activePromoDiscount = 0;
+        let activePromoCodeText = "";
+
+        window.onload = function() {
+            // Check system preferences or user state for dark theme
+            if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                updateThemeIcon(true);
+            } else {
+                document.documentElement.classList.remove('dark');
+                updateThemeIcon(false);
+            }
+
+            renderCategoryPills();
+            renderCatalog();
+            updateCartCounts();
+            lucide.createIcons();
+        };
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+            showToast(isDark ? "Dark theme applied" : "Light theme applied", "sun");
+        }
+
+        function updateThemeIcon(isDark) {
+            const icon = document.getElementById('theme-icon');
+            if (isDark) {
+                icon.setAttribute('data-lucide', 'sun');
+            } else {
+                icon.setAttribute('data-lucide', 'moon');
+            }
+            lucide.createIcons();
+        }
+
+        // Render category filters dynamically
+        function renderCategoryPills() {
+            const categories = ["All", ...new Set(products.map(p => p.category))];
+            const pillContainer = document.getElementById('category-pills');
+            
+            pillContainer.innerHTML = categories.map(cat => {
+                const isActive = activeCategory === cat;
+                return `
+                    <button onclick="filterCategory('${cat}')" class="px-5 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap select-none ${
+                        isActive 
+                        ? 'bg-brand-600 text-white shadow-md shadow-brand-500/10' 
+                        : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 dark:text-slate-300 dark:border-slate-800'
+                    }">
+                        ${cat}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function filterCategory(cat) {
+            activeCategory = cat;
+            renderCategoryPills();
+            renderCatalog();
+        }
+
+        function handleSearch(val) {
+            searchQuery = val.toLowerCase().trim();
+            // Sync both search inputs visually
+            document.getElementById('desktop-search').value = val;
+            document.getElementById('mobile-search').value = val;
+            renderCatalog();
+        }
+
+        function handleSort(option) {
+            sortOption = option;
+            renderCatalog();
+        }
+
+        function resetFilters() {
+            activeCategory = "All";
+            searchQuery = "";
+            sortOption = "featured";
+            document.getElementById('desktop-search').value = "";
+            document.getElementById('mobile-search').value = "";
+            document.getElementById('sort-select').value = "featured";
+            renderCategoryPills();
+            renderCatalog();
+            showToast("Catalog filters reset", "filter");
+        }
+
+        function scrollToGrid() {
+            document.getElementById('catalog-controls').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Dynamic product renderer with rating calculation
+        function renderCatalog() {
+            let filtered = products.filter(p => {
+                const matchesCategory = activeCategory === "All" || p.category === activeCategory;
+                const matchesSearch = p.title.toLowerCase().includes(searchQuery) || 
+                                      p.description.toLowerCase().includes(searchQuery) ||
+                                      p.category.toLowerCase().includes(searchQuery);
+                return matchesCategory && matchesSearch;
+            });
+
+            // Sorting Engine
+            if (sortOption === "price-low") {
+                filtered.sort((a, b) => a.price - b.price);
+            } else if (sortOption === "price-high") {
+                filtered.sort((a, b) => b.price - a.price);
+            } else if (sortOption === "rating") {
+                filtered.sort((a, b) => b.rating - a.rating);
+            }
+
+            const grid = document.getElementById('catalog-grid');
+            const empty = document.getElementById('empty-state');
+            document.getElementById('results-count').innerText = `Showing ${filtered.length} products`;
+
+            if (filtered.length === 0) {
+                grid.classList.add('hidden');
+                empty.classList.remove('hidden');
+                empty.classList.add('flex');
+                return;
+            } else {
+                grid.classList.remove('hidden');
+                empty.classList.add('hidden');
+                empty.classList.remove('flex');
+            }
+
+            grid.innerHTML = filtered.map(p => {
+                // Generate star representation
+                const fullStars = Math.floor(p.rating);
+                const halfStar = p.rating % 1 >= 0.5 ? 1 : 0;
+                let starString = '';
+                for (let i = 0; i < fullStars; i++) starString += '<i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 text-amber-400"></i>';
+                if (halfStar) starString += '<i data-lucide="star-half" class="w-3.5 h-3.5 fill-amber-400 text-amber-400"></i>';
+                const remaining = 5 - fullStars - halfStar;
+                for (let i = 0; i < remaining; i++) starString += '<i data-lucide="star" class="w-3.5 h-3.5 text-slate-300 dark:text-slate-700"></i>';
+
+                return `
+                    <div class="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-none transition-all duration-300 flex flex-col h-full transform hover:-translate-y-1">
+                        <!-- Image Frame -->
+                        <div class="relative bg-slate-50 dark:bg-slate-950/30 pt-[100%] overflow-hidden cursor-pointer" onclick="openProductDetail(${p.id})">
+                            <img src="${p.mainImage}" alt="${p.title}" onerror="this.src='https://placehold.co/400x400/6366f1/ffffff?text=${encodeURIComponent(p.title)}'" class="absolute inset-0 w-full h-full object-contain p-4 group-hover:scale-105 transition duration-500">
+                            <!-- Overlay Pill -->
+                            <div class="absolute top-3 left-3 flex gap-1">
+                                <span class="bg-slate-900/90 dark:bg-slate-800/90 backdrop-blur text-white text-[10px] font-bold tracking-wider uppercase px-2 py-1 rounded-full">
+                                    ${p.category}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Card Details -->
+                        <div class="p-5 flex-1 flex flex-col justify-between">
+                            <div>
+                                <!-- Rating and reviews sum -->
+                                <div class="flex items-center gap-1.5 mb-2">
+                                    <div class="flex text-amber-400">${starString}</div>
+                                    <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400">${p.rating}</span>
+                                </div>
+                                <h3 class="font-extrabold text-sm text-slate-900 dark:text-white line-clamp-1 hover:text-brand-600 dark:hover:text-brand-400 transition cursor-pointer" onclick="openProductDetail(${p.id})">
+                                    ${p.title}
+                                </h3>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-1.5 mb-4 leading-relaxed">
+                                    ${p.description}
+                                </p>
+                            </div>
+
+                            <div>
+                                <!-- Pricing and checkout trigger -->
+                                <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+                                    <div>
+                                        <div class="text-[10px] text-slate-400 line-through font-medium">$${p.originalPrice.toFixed(2)}</div>
+                                        <div class="text-base font-extrabold text-slate-900 dark:text-white">$${p.price.toFixed(2)}</div>
+                                    </div>
+                                    <button onclick="addToCart(${p.id}, 1)" class="p-2.5 rounded-full bg-slate-100 hover:bg-brand-600 hover:text-white text-slate-700 dark:bg-slate-800 dark:hover:bg-brand-600 dark:text-slate-200 shadow-sm active:scale-95 transition-all" aria-label="Quick Add to Bag">
+                                        <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // Product details logic and gallery previewer
+        function openProductDetail(productId) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+            currentDetailProduct = product;
+            selectedReviewRating = 0; // reset rating form
+
+            // Set main assets
+            document.getElementById('modal-category').innerText = product.category;
+            document.getElementById('modal-title').innerText = product.title;
+            document.getElementById('modal-desc').innerText = product.description;
+            document.getElementById('modal-current-price').innerText = `$${product.price.toFixed(2)}`;
+            document.getElementById('modal-original-price').innerText = `$${product.originalPrice.toFixed(2)}`;
+            
+            // Set dynamic specs
+            document.getElementById('spec-warranty').innerText = product.specs.warranty;
+            document.getElementById('spec-materials').innerText = product.specs.materials;
+            document.getElementById('spec-dimensions').innerText = product.specs.dimensions;
+
+            // Thumbnail configuration
+            const mainImg = document.getElementById('modal-main-image');
+            mainImg.src = product.mainImage;
+
+            const allImages = [product.mainImage, ...product.alternateImages];
+            const thumbGrid = document.getElementById('modal-thumbnails-grid');
+            thumbGrid.innerHTML = allImages.map((img, index) => {
+                return `
+                    <button onclick="changeModalMainImage('${img}', this)" class="flex-shrink-0 w-12 h-12 rounded-lg border-2 ${index === 0 ? 'border-brand-500' : 'border-slate-200 dark:border-slate-800'} overflow-hidden focus:outline-none bg-white transition hover:opacity-90">
+                        <img src="${img}" onerror="this.src='https://placehold.co/100x100/6366f1/ffffff?text=X'" class="w-full h-full object-contain p-0.5">
+                    </button>
+                `;
+            }).join('');
+
+            // Star Calculation
+            updateModalRatingDisplays(product);
+
+            // Display Reviews Count dynamically
+            document.getElementById('tab-review-badge').innerText = product.reviews.length;
+            renderModalReviewsList(product);
+
+            // Default layout tabs
+            switchTab('specs');
+
+            // Set dynamic button click
+            document.getElementById('modal-add-cart-btn').setAttribute('onclick', `addFromDetailModal(${product.id})`);
+            document.getElementById('modal-qty-display').innerText = "1";
+
+            // Open animations
+            const modal = document.getElementById('detail-modal');
+            const card = document.getElementById('detail-card');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                card.classList.remove('scale-95', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 50);
+
+            // Reset dynamic review stars to initial grey
+            setReviewRating(0);
+            lucide.createIcons();
+        }
+
+        function changeModalMainImage(src, buttonElem) {
+            document.getElementById('modal-main-image').src = src;
+            // Clear prior highlighted thumbnails
+            const buttons = document.querySelectorAll('#modal-thumbnails-grid button');
+            buttons.forEach(btn => btn.classList.replace('border-brand-500', 'border-slate-200'));
+            buttons.forEach(btn => btn.classList.replace('dark:border-slate-850', 'dark:border-slate-800'));
+            buttonElem.classList.replace('border-slate-200', 'border-brand-500');
+        }
+
+        // Helper to refresh average stars
+        function updateModalRatingDisplays(product) {
+            const avg = product.rating;
+            document.getElementById('modal-rating-avg').innerText = avg.toFixed(1);
+            document.getElementById('modal-rating-count').innerText = `(${product.reviews.length} Review${product.reviews.length === 1 ? '' : 's'})`;
+
+            const fullStars = Math.floor(avg);
+            const halfStar = avg % 1 >= 0.5 ? 1 : 0;
+            let starsHtml = '';
+            for (let i = 0; i < fullStars; i++) starsHtml += '<i data-lucide="star" class="w-4 h-4 fill-amber-400 text-amber-400"></i>';
+            if (halfStar) starsHtml += '<i data-lucide="star-half" class="w-4 h-4 fill-amber-400 text-amber-400"></i>';
+            const remain = 5 - fullStars - halfStar;
+            for (let i = 0; i < remain; i++) starsHtml += '<i data-lucide="star" class="w-4 h-4 text-slate-300 dark:text-slate-700"></i>';
+
+            document.getElementById('modal-stars').innerHTML = starsHtml;
+            lucide.createIcons();
+        }
+
+        function closeProductDetail() {
+            const modal = document.getElementById('detail-modal');
+            const card = document.getElementById('detail-card');
+            card.classList.replace('scale-100', 'scale-95');
+            card.classList.replace('opacity-100', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                currentDetailProduct = null;
+            }, 250);
+        }
+
+        function adjustDetailQty(amount) {
+            const display = document.getElementById('modal-qty-display');
+            let current = parseInt(display.innerText);
+            current += amount;
+            if (current < 1) current = 1;
+            display.innerText = current;
+        }
+
+        function addFromDetailModal(productId) {
+            const qty = parseInt(document.getElementById('modal-qty-display').innerText);
+            addToCart(productId, qty);
+            closeProductDetail();
+        }
+
+        // Tab selection engine within Product details view
+        function switchTab(tab) {
+            currentDetailTab = tab;
+            const specsBtn = document.getElementById('tab-specs-btn');
+            const reviewsBtn = document.getElementById('tab-reviews-btn');
+            const specsContent = document.getElementById('tab-specs-content');
+            const reviewsContent = document.getElementById('tab-reviews-content');
+
+            if (tab === 'specs') {
+                specsBtn.className = "border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 pb-2 transition";
+                reviewsBtn.className = "border-b-2 border-transparent text-slate-500 dark:text-slate-400 pb-2 hover:text-slate-700 dark:hover:text-slate-200 transition flex items-center gap-1.5";
+                specsContent.classList.remove('hidden');
+                reviewsContent.classList.add('hidden');
+            } else {
+                reviewsBtn.className = "border-b-2 border-brand-500 text-brand-600 dark:text-brand-400 pb-2 transition flex items-center gap-1.5";
+                specsBtn.className = "border-b-2 border-transparent text-slate-500 dark:text-slate-400 pb-2 hover:text-slate-700 dark:hover:text-slate-200 transition";
+                reviewsContent.classList.remove('hidden');
+                specsContent.classList.add('hidden');
+            }
+        }
+
+        // Reviews dynamic generator
+        function renderModalReviewsList(product) {
+            const container = document.getElementById('reviews-list');
+            if (product.reviews.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">Be the first to review this outstanding piece!</p>`;
+                return;
+            }
+
+            container.innerHTML = product.reviews.map(rev => {
+                let ratingStars = '';
+                for (let i = 0; i < rev.rating; i++) ratingStars += '<i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i>';
+                for (let i = 0; i < (5 - rev.rating); i++) ratingStars += '<i data-lucide="star" class="w-3 h-3 text-slate-300 dark:text-slate-700"></i>';
+
+                return `
+                    <div class="border-b border-slate-100 dark:border-slate-800 pb-3 last:border-0">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-bold text-slate-800 dark:text-slate-200">${rev.author}</span>
+                            <span class="text-[10px] text-slate-400 font-medium">${rev.date}</span>
+                        </div>
+                        <div class="flex gap-0.5 text-amber-400 mb-1.5">${ratingStars}</div>
+                        <p class="text-xs text-slate-500 dark:text-slate-300 leading-relaxed">${rev.comment}</p>
+                    </div>
+                `;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // Review star selection inside submission form
+        function setReviewRating(rating) {
+            selectedReviewRating = rating;
+            const stars = document.querySelectorAll('.review-star-btn');
+            stars.forEach((star, index) => {
+                const icon = star.querySelector('i');
+                if (index < rating) {
+                    icon.classList.remove('text-slate-300', 'dark:text-slate-700');
+                    icon.classList.add('fill-amber-400', 'text-amber-400');
+                } else {
+                    icon.classList.remove('fill-amber-400', 'text-amber-400');
+                    icon.classList.add('text-slate-300', 'dark:text-slate-700');
+                }
+            });
+        }
+
+        // Form submission for individual products
+        function submitReview() {
+            if (!currentDetailProduct) return;
+            const authorInput = document.getElementById('review-author');
+            const commentInput = document.getElementById('review-comment');
+
+            const author = authorInput.value.trim();
+            const comment = commentInput.value.trim();
+
+            if (!author || !comment) {
+                showToast("Please supply your name and writing comment.", "alert-triangle");
+                return;
+            }
+            if (selectedReviewRating === 0) {
+                showToast("Please choose a star rating first.", "star");
+                return;
+            }
+
+            // Create new review item
+            const newRev = {
+                author: author,
+                rating: selectedReviewRating,
+                date: new Date().toISOString().split('T')[0],
+                comment: comment
+            };
+
+            // Push to current state memory
+            currentDetailProduct.reviews.unshift(newRev);
+
+            // Recalculate Average Product Rating
+            const totalRating = currentDetailProduct.reviews.reduce((sum, r) => sum + r.rating, 0);
+            currentDetailProduct.rating = parseFloat((totalRating / currentDetailProduct.reviews.length).toFixed(1));
+
+            // UI feedback & inputs cleanups
+            authorInput.value = "";
+            commentInput.value = "";
+            setReviewRating(0);
+
+            // Re-render UI
+            updateModalRatingDisplays(currentDetailProduct);
+            renderModalReviewsList(currentDetailProduct);
+            document.getElementById('tab-review-badge').innerText = currentDetailProduct.reviews.length;
+            renderCatalog(); // updates primary main grid ratings
+
+            showToast("Review published successfully!", "check-circle");
+        }
+
+        // Cart operations
+        function toggleCartDrawer() {
+            const drawer = document.getElementById('cart-drawer');
+            const panel = document.getElementById('cart-panel');
+            
+            if (drawer.classList.contains('hidden')) {
+                renderCartDrawerItems();
+                drawer.classList.remove('hidden');
+                setTimeout(() => {
+                    panel.classList.remove('translate-x-full');
+                }, 50);
+            } else {
+                panel.classList.add('translate-x-full');
+                setTimeout(() => {
+                    drawer.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        function addToCart(productId, qty) {
+            const product = products.find(p => p.id === productId);
+            if (!product) return;
+
+            const existing = cart.find(item => item.product.id === productId);
+            if (existing) {
+                existing.qty += qty;
+            } else {
+                cart.push({ product: product, qty: qty });
+            }
+
+            updateCartCounts();
+            showToast(`Added ${qty}x ${product.title} to Bag`, "shopping-bag");
+            
+            // Refresh cart render if the drawer happens to be open
+            if (!document.getElementById('cart-drawer').classList.contains('hidden')) {
+                renderCartDrawerItems();
+            }
+        }
+
+        function adjustCartItemQty(productId, amount) {
+            const item = cart.find(i => i.product.id === productId);
+            if (!item) return;
+
+            item.qty += amount;
+            if (item.qty <= 0) {
+                // Delete if zeroed
+                cart = cart.filter(i => i.product.id !== productId);
+                showToast(`Removed ${item.product.title} from Bag`, "trash-2");
+            }
+
+            updateCartCounts();
+            renderCartDrawerItems();
+        }
+
+        function removeCartItem(productId) {
+            const item = cart.find(i => i.product.id === productId);
+            if (!item) return;
+            cart = cart.filter(i => i.product.id !== productId);
+            updateCartCounts();
+            renderCartDrawerItems();
+            showToast(`Removed ${item.product.title} from Bag`, "trash-2");
+        }
+
+        function updateCartCounts() {
+            const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+            const badge = document.getElementById('cart-badge');
+            const drawerBadge = document.getElementById('cart-drawer-count');
+
+            if (totalQty > 0) {
+                badge.innerText = totalQty;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+            drawerBadge.innerText = `${totalQty} Item${totalQty === 1 ? '' : 's'}`;
+        }
+
+        // Render drawer items with subtotaling math
+        function renderCartDrawerItems() {
+            const container = document.getElementById('cart-items-container');
+            const checkoutBtn = document.getElementById('checkout-btn');
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-20 text-center text-slate-400">
+                        <i data-lucide="shopping-bag" class="w-12 h-12 mb-3"></i>
+                        <p class="text-xs font-bold">Your shopping bag is empty.</p>
+                        <p class="text-[10px] text-slate-400 max-w-xs mt-1">Explore our futuristic premium goods catalog to load elements.</p>
+                    </div>
+                `;
+                checkoutBtn.disabled = true;
+                checkoutBtn.className = "w-full py-3 bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed rounded-full text-sm font-bold transition flex items-center justify-center gap-2";
+                updateTotals(0);
+                return;
+            }
+
+            checkoutBtn.disabled = false;
+            checkoutBtn.className = "w-full py-3 bg-brand-600 hover:bg-brand-500 active:scale-[0.99] text-white rounded-full font-bold text-sm shadow-lg shadow-brand-500/10 transition flex items-center justify-center gap-2";
+
+            container.innerHTML = cart.map(item => {
+                return `
+                    <div class="flex gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800 transition">
+                        <!-- Tiny preview image -->
+                        <div class="w-16 h-16 bg-white dark:bg-slate-900 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-200/60 dark:border-slate-800">
+                            <img src="${item.product.mainImage}" alt="${item.product.title}" onerror="this.src='https://placehold.co/100x100/6366f1/ffffff?text=X'" class="object-contain max-h-12 max-w-12">
+                        </div>
+                        <!-- Info -->
+                        <div class="flex-1 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-start">
+                                    <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200 line-clamp-1 mr-2">${item.product.title}</h4>
+                                    <button onclick="removeCartItem(${item.product.id})" class="text-slate-400 hover:text-red-500 transition">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
+                                <span class="text-[10px] text-slate-400 font-semibold uppercase">${item.product.category}</span>
+                            </div>
+
+                            <div class="flex items-center justify-between mt-2">
+                                <!-- Qty controls -->
+                                <div class="flex items-center border border-slate-200 dark:border-slate-800 rounded-full py-0.5 px-2 bg-white dark:bg-slate-900">
+                                    <button onclick="adjustCartItemQty(${item.product.id}, -1)" class="p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">
+                                        <i data-lucide="minus" class="w-3 h-3"></i>
+                                    </button>
+                                    <span class="w-7 text-center text-xs font-bold">${item.qty}</span>
+                                    <button onclick="adjustCartItemQty(${item.product.id}, 1)" class="p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition">
+                                        <i data-lucide="plus" class="w-3 h-3"></i>
+                                    </button>
+                                </div>
+                                <!-- Calculated individual price -->
+                                <span class="text-xs font-extrabold text-slate-900 dark:text-white">$${(item.product.price * item.qty).toFixed(2)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Recalculate Subtotal
+            const subtotal = cart.reduce((sum, item) => sum + (item.product.price * item.qty), 0);
+            updateTotals(subtotal);
+            lucide.createIcons();
+        }
+
+        // Apply voucher code algorithm
+        function applyPromoCode() {
+            const code = document.getElementById('promo-input').value.trim().toUpperCase();
+            const msg = document.getElementById('promo-msg');
+
+            if (code === "ZENITH20") {
+                activePromoDiscount = 0.20; // 20% off
+                activePromoCodeText = "ZENITH20";
+                msg.innerText = "Promo Code ZENITH20 applied! (20% off)";
+                msg.className = "text-[11px] mt-1 text-green-600 dark:text-green-400 font-semibold";
+                msg.classList.remove('hidden');
+                showToast("Promo code applied: 20% discount!", "gift");
+            } else if (code === "") {
+                activePromoDiscount = 0;
+                activePromoCodeText = "";
+                msg.classList.add('hidden');
+            } else {
+                activePromoDiscount = 0;
+                activePromoCodeText = "";
+                msg.innerText = "Invalid coupon code.";
+                msg.className = "text-[11px] mt-1 text-red-500 font-semibold";
+                msg.classList.remove('hidden');
+            }
+            renderCartDrawerItems();
+        }
+
+        function updateTotals(subtotal) {
+            const discountVal = subtotal * activePromoDiscount;
+            const finalSubtotal = subtotal - discountVal;
+            const taxVal = finalSubtotal * 0.0825; // Simulated tax (8.25%)
+            const totalVal = finalSubtotal + taxVal;
+
+            document.getElementById('cart-subtotal').innerText = `$${subtotal.toFixed(2)}`;
+            
+            const discRow = document.getElementById('promo-discount-row');
+            if (activePromoDiscount > 0 && subtotal > 0) {
+                document.getElementById('cart-discount').innerText = `-$${discountVal.toFixed(2)}`;
+                discRow.classList.remove('hidden');
+            } else {
+                discRow.classList.add('hidden');
+            }
+
+            document.getElementById('cart-tax').innerText = `$${taxVal.toFixed(2)}`;
+            document.getElementById('cart-total').innerText = `$${totalVal.toFixed(2)}`;
+        }
+
+        // Checkout Procedures
+        function openCheckoutModal() {
+            // Check empty state
+            if (cart.length === 0) return;
+            
+            // Close Cart drawer smoothly
+            toggleCartDrawer();
+
+            // Populate checkout totals
+            const subtotal = cart.reduce((sum, item) => sum + (item.product.price * item.qty), 0);
+            const discountVal = subtotal * activePromoDiscount;
+            const finalSubtotal = subtotal - discountVal;
+            const taxVal = finalSubtotal * 0.0825;
+            const totalVal = finalSubtotal + taxVal;
+
+            document.getElementById('chk-subtotal').innerText = `$${subtotal.toFixed(2)}`;
+            const discRow = document.getElementById('chk-disc-row');
+            if (activePromoDiscount > 0) {
+                document.getElementById('chk-disc').innerText = `-$${discountVal.toFixed(2)}`;
+                discRow.classList.remove('hidden');
+            } else {
+                discRow.classList.add('hidden');
+            }
+            document.getElementById('chk-tax').innerText = `$${taxVal.toFixed(2)}`;
+            document.getElementById('chk-total').innerText = `$${totalVal.toFixed(2)}`;
+
+            // Populate right column list of products
+            const list = document.getElementById('checkout-summary-items');
+            list.innerHTML = cart.map(item => {
+                return `
+                    <div class="flex justify-between items-center text-xs pb-1 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-slate-500 dark:text-slate-400 font-semibold truncate max-w-[150px]">${item.product.title}</span>
+                        <span class="text-slate-400 dark:text-slate-500">x${item.qty}</span>
+                        <span class="font-bold text-slate-800 dark:text-slate-200">$${(item.product.price * item.qty).toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('');
+
+            // Reset Form Values
+            document.getElementById('checkout-form').reset();
+
+            // Open Animation
+            const modal = document.getElementById('checkout-modal');
+            const card = document.getElementById('checkout-card');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                card.classList.remove('scale-95', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 50);
+
+            lucide.createIcons();
+        }
+
+        function closeCheckoutModal() {
+            const modal = document.getElementById('checkout-modal');
+            const card = document.getElementById('checkout-card');
+            card.classList.replace('scale-100', 'scale-95');
+            card.classList.replace('opacity-100', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 250);
+        }
+
+        // Simulated credit card pipeline and final receipt output
+        function processCheckout(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('ship-name').value;
+            const email = document.getElementById('ship-email').value;
+            const address = document.getElementById('ship-address').value;
+            const city = document.getElementById('ship-city').value;
+            const zip = document.getElementById('ship-zip').value;
+
+            // Simple loading simulation
+            const btn = document.getElementById('submit-checkout-btn');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Processing Secure Payment...`;
+            lucide.createIcons();
+
+            setTimeout(() => {
+                // Calculate receipt info
+                const subtotal = cart.reduce((sum, item) => sum + (item.product.price * item.qty), 0);
+                const discountVal = subtotal * activePromoDiscount;
+                const finalSubtotal = subtotal - discountVal;
+                const taxVal = finalSubtotal * 0.0825;
+                const totalVal = finalSubtotal + taxVal;
+
+                const receiptId = "#ZN-" + Math.floor(10000 + Math.random() * 90000);
+                const receiptDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+                // Archive simulation into local state order logs
+                const completedOrder = {
+                    id: receiptId,
+                    date: receiptDate,
+                    recipient: name,
+                    address: `${address}, ${city}, ${zip}`,
+                    items: [...cart],
+                    subtotal: subtotal,
+                    discount: discountVal,
+                    tax: taxVal,
+                    total: totalVal
+                };
+                orders.unshift(completedOrder);
+                updateHistoryBadge();
+
+                // Fill receipt Modal
+                document.getElementById('receipt-id').innerText = receiptId;
+                document.getElementById('receipt-date').innerText = receiptDate;
+                document.getElementById('receipt-recipient').innerText = name;
+                document.getElementById('receipt-subtotal').innerText = `$${subtotal.toFixed(2)}`;
+                document.getElementById('receipt-total').innerText = `$${totalVal.toFixed(2)}`;
+
+                const receiptItemsList = document.getElementById('receipt-items');
+                receiptItemsList.innerHTML = cart.map(item => {
+                    return `
+                        <div class="flex justify-between">
+                            <span class="text-slate-500 max-w-[180px] truncate">${item.product.title} (x${item.qty})</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-200">$${(item.product.price * item.qty).toFixed(2)}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                // Clean Button States
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+
+                // Close checkout modal & open order confirmed overlay
+                closeCheckoutModal();
+                openSuccessModal();
+
+                // Clear dynamic customer shopping cart memory
+                cart = [];
+                updateCartCounts();
+                showToast("Payment Authorized. Order Confirmed!", "check-circle");
+            }, 1800);
+        }
+
+        function openSuccessModal() {
+            const modal = document.getElementById('success-modal');
+            const card = document.getElementById('success-card');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                card.classList.remove('scale-95', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 50);
+        }
+
+        function closeSuccessModal() {
+            const modal = document.getElementById('success-modal');
+            const card = document.getElementById('success-card');
+            card.classList.replace('scale-100', 'scale-95');
+            card.classList.replace('opacity-100', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 250);
+        }
+
+        // Clipboard Copy function using iframe fallback execution
+        function copyReceiptToClipboard() {
+            if (orders.length === 0) return;
+            const o = orders[0];
+            const text = `ZENITH E-COMMERCE MOCKUP RECEIPT\nOrder ID: ${o.id}\nRecipient: ${o.recipient}\nDate: ${o.date}\nTotal Paid: $${o.total.toFixed(2)}\nItems:\n${o.items.map(i => `- ${i.product.title} x${i.qty} ($${(i.product.price*i.qty).toFixed(2)})`).join('\n')}`;
+
+            // Create invisible textarea fallback for sandbox compatibility
+            const el = document.createElement('textarea');
+            el.value = text;
+            el.setAttribute('readonly', '');
+            el.style.position = 'absolute';
+            el.style.left = '-9999px';
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+
+            showToast("Receipt copied to clipboard!", "copy");
+        }
+
+        // Purchase Logs Module
+        function updateHistoryBadge() {
+            const badge = document.getElementById('order-history-badge');
+            if (orders.length > 0) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function openOrderHistoryModal() {
+            const modal = document.getElementById('history-modal');
+            const card = document.getElementById('history-card');
+            const list = document.getElementById('history-list');
+            const empty = document.getElementById('history-empty');
+
+            if (orders.length === 0) {
+                list.classList.add('hidden');
+                empty.classList.remove('hidden');
+            } else {
+                list.classList.remove('hidden');
+                empty.classList.add('hidden');
+
+                list.innerHTML = orders.map(ord => {
+                    const itemSummary = ord.items.map(i => `${i.product.title} (x${i.qty})`).join(', ');
+                    return `
+                        <div class="p-4 bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+                            <div class="flex justify-between items-center font-bold mb-2">
+                                <span class="text-brand-600 dark:text-brand-400 font-extrabold">${ord.id}</span>
+                                <span class="text-slate-400 font-semibold">${ord.date}</span>
+                            </div>
+                            <div class="text-slate-500 dark:text-slate-300 font-medium mb-1 flex items-center gap-1">
+                                <i data-lucide="package" class="w-3.5 h-3.5 flex-shrink-0 text-slate-400"></i>
+                                <span class="truncate">${itemSummary}</span>
+                            </div>
+                            <div class="text-slate-500 dark:text-slate-300 font-medium mb-2 flex items-center gap-1">
+                                <i data-lucide="map-pin" class="w-3.5 h-3.5 flex-shrink-0 text-slate-400"></i>
+                                <span>${ord.address}</span>
+                            </div>
+                            <div class="flex justify-between items-center border-t border-slate-200/50 dark:border-slate-800/50 pt-2 text-slate-900 dark:text-white font-extrabold text-sm">
+                                <span>Grand Total</span>
+                                <span>$${ord.total.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                card.classList.remove('scale-95', 'opacity-0');
+                card.classList.add('scale-100', 'opacity-100');
+            }, 50);
+
+            lucide.createIcons();
+        }
+
+        function closeOrderHistoryModal() {
+            const modal = document.getElementById('history-modal');
+            const card = document.getElementById('history-card');
+            card.classList.replace('scale-100', 'scale-95');
+            card.classList.replace('opacity-100', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 250);
+        }
+
+        // Custom interactive visual Toast mechanism
+        function showToast(message, iconName = "info") {
+            const toast = document.getElementById('toast');
+            const msgSpan = document.getElementById('toast-msg');
+            const iconElement = document.getElementById('toast-icon');
+
+            msgSpan.innerText = message;
+            iconElement.setAttribute('data-lucide', iconName);
+            lucide.createIcons();
+
+            // Slide up & fade in
+            toast.classList.remove('translate-y-10', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            // Hide Toast after duration
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-10', 'opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
