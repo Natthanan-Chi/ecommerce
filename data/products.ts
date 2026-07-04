@@ -353,3 +353,57 @@ export async function deleteProduct(id: string): Promise<void> {
 
   if (error) throw new Error(error.message);
 }
+
+// ============================================================================
+// ORDER TYPES & API
+// ============================================================================
+
+export interface OrderInput {
+  subtotal: number;
+  discount: number;
+  tax: number;
+  shipping_fee: number;
+  grand_total: number;
+  shipping_address: string;
+  items: {
+    product_id: string;
+    quantity: number;
+    unit_price: number;
+  }[];
+}
+
+/** Insert a new order header and its items into Supabase. */
+export async function createOrder(order: OrderInput): Promise<string> {
+  const { data, error } = await supabase
+    .from("orders")
+    .insert({
+      subtotal: order.subtotal,
+      discount: order.discount,
+      tax: order.tax,
+      shipping_fee: order.shipping_fee,
+      grand_total: order.grand_total,
+      shipping_address: order.shipping_address,
+      status: "PENDING",
+    })
+    .select("id")
+    .single();
+
+  if (error) throw new Error(error.message);
+
+  const orderId = (data as { id: string }).id;
+
+  if (order.items.length > 0) {
+    const { error: itemsErr } = await supabase.from("order_items").insert(
+      order.items.map((item) => ({
+        order_id: orderId,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+      }))
+    );
+    if (itemsErr) throw new Error(itemsErr.message);
+  }
+
+  return orderId;
+}
+

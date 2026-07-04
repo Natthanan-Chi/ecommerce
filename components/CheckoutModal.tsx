@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { X, Truck, CreditCard, Lock, CheckCircle, Loader2 } from "lucide-react";
-import { Product } from "../data/products";
+import { X, Truck, CreditCard, Lock, CheckCircle, Loader2, AlertCircle } from "lucide-react";
+import { Product, createOrder } from "../data/products";
 
 interface CartItem {
   product: Product;
@@ -37,8 +37,9 @@ export default function CheckoutModal({
   const [cardNumber, setCardNumber] = useState("");
   const [expiry, setExpiry] = useState("");
   const [cvv, setCvv] = useState("");
-
   const [animateShow, setAnimateShow] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
 
   // Sync animations asynchronously on mount
   useEffect(() => {
@@ -60,20 +61,36 @@ export default function CheckoutModal({
   const totalVal = finalSubtotal + taxVal;
 
   if (!isOpen) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
 
     setIsProcessing(true);
+    setError(null);
 
-    // Simulate 1.8s payment processing
-    setTimeout(() => {
+    try {
+      await createOrder({
+        subtotal: finalSubtotal,
+        discount: discountVal,
+        tax: taxVal,
+        shipping_fee: 0,
+        grand_total: totalVal,
+        shipping_address: `${address}, ${city}, ${zip}`,
+        items: cart.map((item) => ({
+          product_id: item.product.id,
+          quantity: item.qty,
+          unit_price: item.product.price,
+        })),
+      });
+
       setIsProcessing(false);
       onCheckoutSuccess(name, email, `${address}, ${city}, ${zip}`);
-    }, 1800);
+    } catch (err) {
+      console.error("[Checkout] Order placement failed:", err);
+      setError(err instanceof Error ? err.message : "Failed to place order in database.");
+      setIsProcessing(false);
+    }
   };
-
   return (
     <div
       className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4"
@@ -225,6 +242,13 @@ export default function CheckoutModal({
                 />
               </div>
             </div>
+
+            {error && (
+              <div className="flex items-center gap-2 p-3 rounded-xl text-xs bg-red-950/60 border border-red-900 text-red-300 mt-4 animate-fade-in">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
 
             <button
               type="submit"
