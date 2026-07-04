@@ -6,8 +6,8 @@ import { Product } from "../data/products";
 
 interface ProductCardProps {
   product: Product;
-  onProductClick: (id: number) => void;
-  onAddToCart: (id: number) => void;
+  onProductClick: (id: string) => void;
+  onAddToCart: (id: string) => void;
 }
 
 export default function ProductCard({

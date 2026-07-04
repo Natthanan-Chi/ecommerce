@@ -7,8 +7,8 @@ import ProductCard from "./ProductCard";
 
 interface CatalogProps {
   products: Product[];
-  onProductClick: (id: number) => void;
-  onAddToCart: (id: number) => void;
+  onProductClick: (id: string) => void;
+  onAddToCart: (id: string) => void;
   activeCategory: string;
   onCategoryChange: (cat: string) => void;
   searchQuery: string;

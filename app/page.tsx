@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { initialProducts, Product } from "../data/products";
+import { fetchProducts, Product } from "../data/products";
 import Header from "../components/Header";
 import Hero from "../components/Hero";
 import Catalog from "../components/Catalog";
@@ -11,11 +11,13 @@ import CheckoutModal from "../components/CheckoutModal";
 import ReceiptModal, { CompletedOrder } from "../components/ReceiptModal";
 import OrderHistoryModal from "../components/OrderHistoryModal";
 import Toast from "../components/Toast";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 
 export default function Home() {
   // Catalog State
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState("featured");
@@ -54,6 +56,30 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Fetch products from Supabase on mount
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoadingProducts(true);
+    setProductsError(null);
+    fetchProducts()
+      .then((data) => {
+        if (!cancelled) {
+          setProducts(data);
+        }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setProductsError(err.message ?? "Failed to load products");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingProducts(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const triggerToast = (message: string, iconName = "info") => {
     setToastMessage(message);
     setToastIcon(iconName);
@@ -80,7 +106,7 @@ export default function Home() {
     }
   };
 
-  const handleAddToCart = (productId: number, qty = 1) => {
+  const handleAddToCart = (productId: string, qty = 1) => {
     const targetProduct = products.find((p) => p.id === productId);
     if (!targetProduct) return;
 
@@ -93,14 +119,14 @@ export default function Home() {
             : item
         );
       } else {
-        return [...prev, { product: targetProduct, qty }];
+        return [...prev, { product: targetProduct!, qty }];
       }
     });
 
     triggerToast(`Added ${qty}x ${targetProduct.title} to Bag`, "shopping-bag");
   };
 
-  const handleAdjustCartQty = (productId: number, amount: number) => {
+  const handleAdjustCartQty = (productId: string, amount: number) => {
     setCart((prev) => {
       const item = prev.find((i) => i.product.id === productId);
       if (!item) return prev;
@@ -117,7 +143,7 @@ export default function Home() {
     });
   };
 
-  const handleRemoveCartItem = (productId: number) => {
+  const handleRemoveCartItem = (productId: string) => {
     const item = cart.find((i) => i.product.id === productId);
     if (!item) return;
 
@@ -184,7 +210,7 @@ export default function Home() {
   };
 
   const handleAddReview = (
-    productId: number,
+    productId: string,
     reviewData: { author: string; rating: number; comment: string }
   ) => {
     setProducts((prevProducts) =>
@@ -262,21 +288,33 @@ export default function Home() {
         />
 
         {/* Dynamic Products Catalog */}
-        <Catalog
-          products={products}
-          onProductClick={(id) => {
-            const prod = products.find((p) => p.id === id) || null;
-            setSelectedProduct(prod);
-          }}
-          onAddToCart={(id) => handleAddToCart(id, 1)}
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          sortOption={sortOption}
-          onSortChange={setSortOption}
-          onResetFilters={handleResetFilters}
-        />
+        {isLoadingProducts ? (
+          <div className="flex flex-col items-center justify-center py-32 text-slate-400 dark:text-slate-600">
+            <Loader2 className="w-10 h-10 animate-spin mb-3" />
+            <p className="text-sm font-medium">Loading products&hellip;</p>
+          </div>
+        ) : productsError ? (
+          <div className="flex flex-col items-center justify-center py-32 text-center">
+            <p className="text-red-500 font-semibold text-sm mb-2">Failed to load products</p>
+            <p className="text-slate-400 text-xs">{productsError}</p>
+          </div>
+        ) : (
+          <Catalog
+            products={products}
+            onProductClick={(id) => {
+              const prod = products.find((p) => p.id === id) || null;
+              setSelectedProduct(prod);
+            }}
+            onAddToCart={(id) => handleAddToCart(id, 1)}
+            activeCategory={activeCategory}
+            onCategoryChange={setActiveCategory}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            sortOption={sortOption}
+            onSortChange={setSortOption}
+            onResetFilters={handleResetFilters}
+          />
+        )}
       </main>
 
       {/* Footer Details */}

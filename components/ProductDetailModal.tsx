@@ -8,9 +8,9 @@ interface ProductDetailModalProps {
   isOpen: boolean;
   product: Product | null;
   onClose: () => void;
-  onAddToCart: (id: number, qty: number) => void;
+  onAddToCart: (id: string, qty: number) => void;
   onAddReview: (
-    productId: number,
+    productId: string,
     review: { author: string; rating: number; comment: string }
   ) => void;
 }

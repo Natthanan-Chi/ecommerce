@@ -13,8 +13,8 @@ interface CartDrawerProps {
   isOpen: boolean;
   cart: CartItem[];
   onClose: () => void;
-  onAdjustQty: (productId: number, amount: number) => void;
-  onRemoveItem: (productId: number) => void;
+  onAdjustQty: (productId: string, amount: number) => void;
+  onRemoveItem: (productId: string) => void;
   promoDiscount: number;
   promoCodeText: string;
   onApplyPromo: (code: string) => void;
