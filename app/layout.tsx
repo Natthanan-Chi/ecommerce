@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Geist, Geist_Mono } from "next/font/google";
+import { AuthProvider } from "../components/AuthProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -49,7 +50,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

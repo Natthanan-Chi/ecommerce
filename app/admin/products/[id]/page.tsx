@@ -22,7 +22,7 @@ import {
   fetchProductById,
   deleteProduct,
   type AdminProduct,
-} from "../../../data/products";
+} from "../../../../data/products";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -174,7 +174,6 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
     fetchProductById(id)
       .then(setProduct)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
@@ -186,7 +185,7 @@ export default function ProductDetailPage() {
     setDeleting(true);
     try {
       await deleteProduct(product.id);
-      router.push("/products");
+      router.push("/admin/products");
     } catch (e) {
       alert(e instanceof Error ? e.message : "Failed to deactivate");
       setDeleting(false);
@@ -211,7 +210,7 @@ export default function ProductDetailPage() {
         <Package className="w-12 h-12 mx-auto text-slate-700" />
         <p className="text-red-400 font-semibold">Product not found</p>
         <p className="text-slate-500 text-sm">{error}</p>
-        <Link href="/products" className="text-brand-400 hover:text-brand-300 text-sm underline">
+        <Link href="/admin/products" className="text-brand-400 hover:text-brand-300 text-sm underline">
           Back to Products
         </Link>
       </div>
@@ -229,7 +228,7 @@ export default function ProductDetailPage() {
         {/* ── Header ── */}
         <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
           <nav className="flex items-center gap-1.5 text-xs text-slate-500" aria-label="Breadcrumb">
-            <Link href="/products" className="hover:text-slate-300 transition-colors">
+            <Link href="/admin/products" className="hover:text-slate-300 transition-colors">
               Products
             </Link>
             <ChevronRight className="w-3.5 h-3.5" />
@@ -238,7 +237,7 @@ export default function ProductDetailPage() {
 
           <div className="flex items-center gap-2">
             <Link
-              href={`/products/${product.id}/edit`}
+              href={`/admin/products/${product.id}/edit`}
               id="edit-product-link"
               className="inline-flex items-center gap-2 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-sm font-bold transition shadow-lg shadow-brand-900/30"
             >

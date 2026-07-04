@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { LayoutGrid, Plus } from "lucide-react";
 
 const NAV_ITEMS = [
-  { label: "All Products", href: "/products", icon: LayoutGrid, exact: true },
-  { label: "Add New Product", href: "/products/new", icon: Plus, exact: false },
+  { label: "All Products", href: "/admin/products", icon: LayoutGrid, exact: true },
+  { label: "Add New Product", href: "/admin/products/new", icon: Plus, exact: false },
 ];
 
 export default function AdminNav() {

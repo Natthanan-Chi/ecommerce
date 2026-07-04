@@ -20,8 +20,8 @@ export default function Hero({
           <circle cx="250" cy="150" r="150" stroke="url(#paint0_linear)" strokeWidth="40" strokeDasharray="10 20" />
           <defs>
             <linearGradient id="paint0_linear" x1="100" y1="0" x2="400" y2="300" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#6366f1" />
-              <stop offset="1" stop-color="#4f46e5" stop-opacity="0" />
+              <stop stopColor="#6366f1" />
+              <stop offset="1" stopColor="#4f46e5" stopOpacity="0" />
             </linearGradient>
           </defs>
         </svg>

@@ -14,7 +14,10 @@ interface CheckoutModalProps {
   cart: CartItem[];
   onClose: () => void;
   promoDiscount: number;
+  userId: string | null;
+  onRequireSignIn: () => void;
   onCheckoutSuccess: (
+    orderId: string,
     recipientName: string,
     recipientEmail: string,
     recipientAddress: string
@@ -26,6 +29,8 @@ export default function CheckoutModal({
   cart,
   onClose,
   promoDiscount,
+  userId,
+  onRequireSignIn,
   onCheckoutSuccess,
 }: CheckoutModalProps) {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -64,12 +69,17 @@ export default function CheckoutModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
+    if (!userId) {
+      onRequireSignIn();
+      return;
+    }
 
     setIsProcessing(true);
     setError(null);
 
     try {
-      await createOrder({
+      const orderId = await createOrder({
+        user_id: userId,
         subtotal: finalSubtotal,
         discount: discountVal,
         tax: taxVal,
@@ -84,7 +94,7 @@ export default function CheckoutModal({
       });
 
       setIsProcessing(false);
-      onCheckoutSuccess(name, email, `${address}, ${city}, ${zip}`);
+      onCheckoutSuccess(orderId, name, email, `${address}, ${city}, ${zip}`);
     } catch (err) {
       console.error("[Checkout] Order placement failed:", err);
       setError(err instanceof Error ? err.message : "Failed to place order in database.");

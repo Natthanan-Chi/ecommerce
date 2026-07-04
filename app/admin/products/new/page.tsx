@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import ProductForm from "../../../components/admin/ProductForm";
+import ProductForm from "../../../../components/admin/ProductForm";
 
 export default function NewProductPage() {
   return (
     <div className="p-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs text-slate-500 mb-6" aria-label="Breadcrumb">
-        <Link href="/products" className="hover:text-slate-300 transition-colors">
+        <Link href="/admin/products" className="hover:text-slate-300 transition-colors">
           Products
         </Link>
         <ChevronRight className="w-3.5 h-3.5" />

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Minus, Plus, ShoppingCart, Edit3, Send, Star } from "lucide-react";
+import { X, Minus, Plus, ShoppingCart, Edit3, Send, Star, Loader2, UserCircle } from "lucide-react";
 import { Product } from "../data/products";
 
 interface ProductDetailModalProps {
@@ -11,8 +11,11 @@ interface ProductDetailModalProps {
   onAddToCart: (id: string, qty: number) => void;
   onAddReview: (
     productId: string,
-    review: { author: string; rating: number; comment: string }
-  ) => void;
+    review: { rating: number; comment: string; displayName?: string | null }
+  ) => Promise<void>;
+  isReviewAuthenticated: boolean;
+  reviewerName: string;
+  onRequireSignInForReview: () => void;
 }
 
 export default function ProductDetailModal({
@@ -21,14 +24,19 @@ export default function ProductDetailModal({
   onClose,
   onAddToCart,
   onAddReview,
+  isReviewAuthenticated,
+  reviewerName,
+  onRequireSignInForReview,
 }: ProductDetailModalProps) {
   const [selectedImage, setSelectedImage] = useState(product?.mainImage || "");
   const [quantity, setQuantity] = useState(1);
   const [activeTab, setActiveTab] = useState<"specs" | "reviews">("specs");
   const [selectedStars, setSelectedStars] = useState(0);
-  const [author, setAuthor] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [comment, setComment] = useState("");
   const [animateShow, setAnimateShow] = useState(false);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
 
   // Sync animations asynchronously on mount
   useEffect(() => {
@@ -38,27 +46,43 @@ export default function ProductDetailModal({
 
   if (!isOpen || !product) return null;
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!author.trim() || !comment.trim()) {
-      alert("Please supply your name and comment.");
+
+    if (!isReviewAuthenticated) {
+      onRequireSignInForReview();
       return;
     }
+
     if (selectedStars === 0) {
-      alert("Please select a star rating.");
+      setReviewError("Please select a star rating.");
       return;
     }
 
-    onAddReview(product.id, {
-      author: author.trim(),
-      rating: selectedStars,
-      comment: comment.trim(),
-    });
+    const trimmedComment = comment.trim();
+    if (!trimmedComment) {
+      setReviewError("Please write a short review.");
+      return;
+    }
 
-    // Reset review form inputs
-    setAuthor("");
-    setComment("");
-    setSelectedStars(0);
+    setIsSubmittingReview(true);
+    setReviewError(null);
+
+    try {
+      await onAddReview(product.id, {
+        rating: selectedStars,
+        comment: trimmedComment,
+        displayName: displayName.trim() || null,
+      });
+
+      setDisplayName("");
+      setComment("");
+      setSelectedStars(0);
+    } catch (err) {
+      setReviewError(err instanceof Error ? err.message : "Unable to save your review.");
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   const renderStars = (rating: number) => {
@@ -313,27 +337,55 @@ export default function ProductDetailModal({
 
                 {/* Comment Inputs */}
                 <form onSubmit={handleReviewSubmit} className="space-y-2 mb-3">
+                  <div className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-xs text-slate-600 dark:text-slate-300">
+                    <UserCircle className="w-4 h-4 shrink-0 text-slate-400" />
+                    <span className="truncate">
+                      {isReviewAuthenticated
+                        ? `Verified account: ${reviewerName || "Customer"}`
+                        : "Sign in to post a verified review"}
+                    </span>
+                  </div>
                   <input
                     type="text"
-                    required
-                    value={author}
-                    onChange={(e) => setAuthor(e.target.value)}
-                    placeholder="Your name (e.g. Liam S.)"
-                    className="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-900 dark:text-slate-100"
+                    value={displayName}
+                    disabled={isSubmittingReview}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Display name (optional, leave blank for Anonymous)"
+                    maxLength={80}
+                    className="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-900 dark:text-slate-100 disabled:opacity-60"
                   />
                   <textarea
                     required
                     rows={2}
                     value={comment}
+                    disabled={isSubmittingReview}
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="Tell other buyers about your experience..."
-                    className="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-900 dark:text-slate-100"
+                    className="w-full text-xs px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-900 dark:text-slate-100 disabled:opacity-60"
                   />
+                  {reviewError && (
+                    <p className="text-[11px] font-semibold text-red-500 dark:text-red-300">
+                      {reviewError}
+                    </p>
+                  )}
                   <button
                     type="submit"
-                    className="w-full py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                    disabled={isSubmittingReview}
+                    className="w-full py-2 bg-slate-900 hover:bg-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 text-white rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    <Send className="w-3 h-3" /> Submit Review
+                    {isSubmittingReview ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" /> Saving Review...
+                      </>
+                    ) : isReviewAuthenticated ? (
+                      <>
+                        <Send className="w-3 h-3" /> Submit Review
+                      </>
+                    ) : (
+                      <>
+                        <UserCircle className="w-3 h-3" /> Sign In To Review
+                      </>
+                    )}
                   </button>
                 </form>
               </div>

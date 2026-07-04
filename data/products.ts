@@ -84,6 +84,15 @@ export interface ProductFormData {
   images: ProductImageInput[];
 }
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  role: "customer" | "admin" | "staff" | "support";
+  first_name: string;
+  last_name: string;
+  avatar_url: string | null;
+}
+
 // ============================================================================
 // INTERNAL SUPABASE RAW TYPES  (storefront join shape)
 // ============================================================================
@@ -92,6 +101,7 @@ interface SupabaseReview {
   rating: number;
   comment: string;
   created_at: string;
+  display_name?: string | null;
   users: { first_name: string; last_name: string } | null;
 }
 
@@ -112,6 +122,85 @@ interface SupabaseProduct {
   reviews: SupabaseReview[];
 }
 
+interface SupabaseOrderProduct {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number;
+  original_price: number | null;
+  categories: { name: string } | null;
+  product_images: SupabaseProductImage[];
+}
+
+interface SupabaseOrderItem {
+  quantity: number;
+  unit_price: number;
+  products: SupabaseOrderProduct | null;
+}
+
+interface SupabaseOrder {
+  id: string;
+  created_at: string;
+  subtotal: number;
+  discount: number;
+  tax: number;
+  grand_total: number;
+  shipping_address: string;
+  order_items: SupabaseOrderItem[];
+}
+
+export interface CustomerOrder {
+  id: string;
+  date: string;
+  address: string;
+  items: { product: Product; qty: number }[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+}
+
+export interface ReviewInput {
+  product_id: string;
+  user_id: string;
+  rating: number;
+  comment: string;
+  display_name?: string | null;
+}
+
+const PRODUCT_SELECT_WITH_REVIEW_DISPLAY_NAME = `
+  id,
+  title,
+  description,
+  price,
+  original_price,
+  categories ( name ),
+  product_images ( image_url, is_main, sort_order ),
+  reviews (
+    rating,
+    comment,
+    created_at,
+    display_name,
+    users ( first_name, last_name )
+  )
+`;
+
+const PRODUCT_SELECT_LEGACY = `
+  id,
+  title,
+  description,
+  price,
+  original_price,
+  categories ( name ),
+  product_images ( image_url, is_main, sort_order ),
+  reviews (
+    rating,
+    comment,
+    created_at,
+    users ( first_name, last_name )
+  )
+`;
+
 // ============================================================================
 // MAPPER  (Supabase row → storefront Product)
 // ============================================================================
@@ -127,14 +216,21 @@ function mapProduct(row: SupabaseProduct): Product {
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((img) => img.image_url);
 
-  const reviews: Review[] = (row.reviews ?? []).map((r) => ({
-    author: r.users
-      ? `${r.users.first_name} ${r.users.last_name}`.trim()
-      : "Anonymous",
-    rating: r.rating,
-    date: r.created_at ? r.created_at.split("T")[0] : "",
-    comment: r.comment,
-  }));
+  const reviews: Review[] = (row.reviews ?? [])
+    .map((r) => {
+      const authorName = r.users
+        ? `${r.users.first_name} ${r.users.last_name}`.trim()
+        : "";
+      const displayName = r.display_name?.trim();
+
+      return {
+        author: displayName || authorName || "Anonymous",
+        rating: r.rating,
+        date: r.created_at ? r.created_at.split("T")[0] : "",
+        comment: r.comment,
+      };
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
 
   const rating =
     reviews.length > 0
@@ -161,40 +257,181 @@ function mapProduct(row: SupabaseProduct): Product {
   };
 }
 
+function mapOrderProduct(row: SupabaseOrderProduct, unitPrice: number): Product {
+  const images = row.product_images ?? [];
+  const mainImage = images.find((img) => img.is_main)?.image_url ?? images[0]?.image_url ?? "";
+  const alternateImages = images
+    .filter((img) => img.image_url !== mainImage)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((img) => img.image_url);
+
+  return {
+    id: row.id,
+    title: row.title,
+    category: row.categories?.name ?? "Uncategorized",
+    price: Number(unitPrice),
+    originalPrice: Number(row.original_price ?? row.price ?? unitPrice),
+    description: row.description ?? "",
+    mainImage,
+    alternateImages,
+    rating: 0,
+    specs: { warranty: "", materials: "", dimensions: "" },
+    reviews: [],
+  };
+}
+
 // ============================================================================
 // STOREFRONT API
 // ============================================================================
 
 export async function fetchProducts(): Promise<Product[]> {
-  const { data, error } = await supabase
+  const initialResult = await supabase
     .from("products")
-    .select(
-      `
-      id,
-      title,
-      description,
-      price,
-      original_price,
-      categories ( name ),
-      product_images ( image_url, is_main, sort_order ),
-      reviews (
-        rating,
-        comment,
-        created_at,
-        users ( first_name, last_name )
-      )
-    `
-    )
+    .select(PRODUCT_SELECT_WITH_REVIEW_DISPLAY_NAME)
     .eq("is_active", true)
     .order("created_at", { ascending: false });
+
+  let data = initialResult.data as unknown[] | null;
+  let error = initialResult.error;
+
+  if (error && error.message.includes("display_name")) {
+    const legacyResult = await supabase
+      .from("products")
+      .select(PRODUCT_SELECT_LEGACY)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    data = legacyResult.data as unknown[] | null;
+    error = legacyResult.error;
+  }
 
   if (error) {
     console.error("[fetchProducts] Supabase error:", error.message);
     return [];
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (data as any[]).map(mapProduct);
+  return ((data ?? []) as SupabaseProduct[]).map(mapProduct);
+}
+
+export async function fetchCurrentUserProfile(
+  userId: string
+): Promise<UserProfile | null> {
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, email, role, first_name, last_name, avatar_url")
+    .eq("id", userId)
+    .single();
+
+  if (error) {
+    console.error("[fetchCurrentUserProfile] Supabase error:", error.message);
+    return null;
+  }
+
+  return data as UserProfile;
+}
+
+export async function fetchMyOrders(): Promise<CustomerOrder[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select(
+      `
+      id,
+      created_at,
+      subtotal,
+      discount,
+      tax,
+      grand_total,
+      shipping_address,
+      order_items (
+        quantity,
+        unit_price,
+        products (
+          id,
+          title,
+          description,
+          price,
+          original_price,
+          categories ( name ),
+          product_images ( image_url, is_main, sort_order )
+        )
+      )
+    `
+    )
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[fetchMyOrders] Supabase error:", error.message);
+    return [];
+  }
+
+  return ((data as unknown[]) as SupabaseOrder[]).map((order) => ({
+    id: order.id,
+    date: new Date(order.created_at).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }),
+    address: order.shipping_address,
+    items: (order.order_items ?? [])
+      .filter((item) => item.products)
+      .map((item) => ({
+        product: mapOrderProduct(item.products!, item.unit_price),
+        qty: item.quantity,
+      })),
+    subtotal: Number(order.subtotal),
+    discount: Number(order.discount),
+    tax: Number(order.tax),
+    total: Number(order.grand_total),
+  }));
+}
+
+export async function createReview(input: ReviewInput): Promise<Review> {
+  const displayName = input.display_name?.trim() || null;
+  const initialResult = await supabase
+    .from("reviews")
+    .insert({
+      product_id: input.product_id,
+      user_id: input.user_id,
+      rating: input.rating,
+      comment: input.comment,
+      display_name: displayName,
+    })
+    .select("rating, comment, created_at, display_name")
+    .single();
+
+  let data = initialResult.data as unknown;
+  let error = initialResult.error;
+
+  if (error && error.message.includes("display_name")) {
+    const legacyResult = await supabase
+      .from("reviews")
+      .insert({
+        product_id: input.product_id,
+        user_id: input.user_id,
+        rating: input.rating,
+        comment: input.comment,
+      })
+      .select("rating, comment, created_at")
+      .single();
+
+    data = legacyResult.data as unknown;
+    error = legacyResult.error;
+  }
+
+  if (error) throw new Error(error.message);
+
+  const row = data as {
+    rating: number;
+    comment: string;
+    created_at: string;
+    display_name?: string | null;
+  };
+  return {
+    author: row.display_name?.trim() || displayName || "Anonymous",
+    rating: row.rating,
+    date: row.created_at ? row.created_at.split("T")[0] : "",
+    comment: row.comment,
+  };
 }
 
 // ============================================================================
@@ -229,7 +466,6 @@ export async function fetchAllProducts(): Promise<AdminProduct[]> {
     console.error("[fetchAllProducts] Supabase error:", error.message);
     return [];
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (data as unknown[]) as AdminProduct[];
 }
 
@@ -359,6 +595,7 @@ export async function deleteProduct(id: string): Promise<void> {
 // ============================================================================
 
 export interface OrderInput {
+  user_id: string;
   subtotal: number;
   discount: number;
   tax: number;
@@ -377,6 +614,7 @@ export async function createOrder(order: OrderInput): Promise<string> {
   const { data, error } = await supabase
     .from("orders")
     .insert({
+      user_id: order.user_id,
       subtotal: order.subtotal,
       discount: order.discount,
       tax: order.tax,

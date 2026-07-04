@@ -92,15 +92,15 @@ export default function ProductForm({ mode, productId, initialData }: ProductFor
     fetchCategories().then(setCategories);
   }, []);
 
-  // Auto-generate slug from title unless user edited it manually
-  useEffect(() => {
-    if (!slugEdited) {
-      setForm((prev) => ({ ...prev, slug: generateSlug(prev.title) }));
-    }
-  }, [form.title, slugEdited]);
-
   const set = <K extends keyof ProductFormData>(key: K, value: ProductFormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const setTitle = (title: string) =>
+    setForm((prev) => ({
+      ...prev,
+      title,
+      slug: slugEdited ? prev.slug : generateSlug(title),
+    }));
 
   // ── Image helpers ──
 
@@ -148,11 +148,11 @@ export default function ProductForm({ mode, productId, initialData }: ProductFor
       if (mode === "create") {
         const { id } = await createProduct(form);
         setFeedback({ type: "success", message: "Product created successfully!" });
-        setTimeout(() => router.push(`/products/${id}`), 1000);
+        setTimeout(() => router.push(`/admin/products/${id}`), 1000);
       } else {
         await updateProduct(productId!, form);
         setFeedback({ type: "success", message: "Changes saved successfully!" });
-        setTimeout(() => router.push(`/products/${productId}`), 1000);
+        setTimeout(() => router.push(`/admin/products/${productId}`), 1000);
       }
     } catch (err) {
       setFeedback({
@@ -202,7 +202,7 @@ export default function ProductForm({ mode, productId, initialData }: ProductFor
                   type="text"
                   required
                   value={form.title}
-                  onChange={(e) => set("title", e.target.value)}
+                  onChange={(e) => setTitle(e.target.value)}
                   className={INPUT_CLS}
                   placeholder="e.g. Wireless Noise-Cancelling Headphones"
                 />

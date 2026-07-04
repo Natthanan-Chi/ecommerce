@@ -8,8 +8,8 @@ import {
   fetchProductById,
   type AdminProduct,
   type ProductFormData,
-} from "../../../../data/products";
-import ProductForm from "../../../../components/admin/ProductForm";
+} from "../../../../../data/products";
+import ProductForm from "../../../../../components/admin/ProductForm";
 
 export default function EditProductPage() {
   const params = useParams();
@@ -21,7 +21,6 @@ export default function EditProductPage() {
 
   useEffect(() => {
     if (!id) return;
-    setLoading(true);
     fetchProductById(id)
       .then(setProduct)
       .catch((e) => setError(e instanceof Error ? e.message : "Failed to load"))
@@ -43,7 +42,7 @@ export default function EditProductPage() {
         <Package className="w-12 h-12 mx-auto text-slate-700" />
         <p className="text-red-400 font-semibold">Product not found</p>
         <p className="text-slate-500 text-sm">{error}</p>
-        <Link href="/products" className="text-brand-400 hover:text-brand-300 text-sm underline">
+        <Link href="/admin/products" className="text-brand-400 hover:text-brand-300 text-sm underline">
           Back to Products
         </Link>
       </div>
@@ -78,12 +77,12 @@ export default function EditProductPage() {
     <div className="p-8">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs text-slate-500 mb-6" aria-label="Breadcrumb">
-        <Link href="/products" className="hover:text-slate-300 transition-colors">
+        <Link href="/admin/products" className="hover:text-slate-300 transition-colors">
           Products
         </Link>
         <ChevronRight className="w-3.5 h-3.5" />
         <Link
-          href={`/products/${id}`}
+          href={`/admin/products/${id}`}
           className="hover:text-slate-300 transition-colors truncate max-w-[160px]"
         >
           {product.title}

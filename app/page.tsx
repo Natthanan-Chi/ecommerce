@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { fetchProducts, Product } from "../data/products";
+import { createReview, fetchMyOrders, fetchProducts, Product } from "../data/products";
 import Header from "../components/Header";
 import Hero from "../components/Hero";
 import Catalog from "../components/Catalog";
@@ -12,8 +12,28 @@ import ReceiptModal, { CompletedOrder } from "../components/ReceiptModal";
 import OrderHistoryModal from "../components/OrderHistoryModal";
 import Toast from "../components/Toast";
 import { Sparkles, Loader2 } from "lucide-react";
+import { useAuth } from "../components/AuthProvider";
+
+const CART_STORAGE_KEY = "zenith:cart-state";
+const POST_LOGIN_ACTION_KEY = "zenith:post-login-action";
+
+type CartItem = { product: Product; qty: number };
+
+interface StoredCartState {
+  cart: CartItem[];
+  promoDiscount: number;
+  promoCodeText: string;
+}
 
 export default function Home() {
+  const {
+    isLoading: isAuthLoading,
+    user,
+    displayName,
+    signInWithGitHub,
+    signOut,
+  } = useAuth();
+
   // Catalog State
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -23,13 +43,16 @@ export default function Home() {
   const [sortOption, setSortOption] = useState("featured");
 
   // Cart State
-  const [cart, setCart] = useState<{ product: Product; qty: number }[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [promoCodeText, setPromoCodeText] = useState("");
+  const [hasHydratedCart, setHasHydratedCart] = useState(false);
 
   // Orders State
   const [orders, setOrders] = useState<CompletedOrder[]>([]);
   const [currentOrder, setCurrentOrder] = useState<CompletedOrder | null>(null);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
 
   // Modals Visibility
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -46,6 +69,16 @@ export default function Home() {
   const [toastIcon, setToastIcon] = useState("info");
   const [toastVisible, setToastVisible] = useState(false);
 
+  const triggerToast = (message: string, iconName = "info") => {
+    setToastMessage(message);
+    setToastIcon(iconName);
+    setToastVisible(true);
+  };
+
+  const handleDismissToast = () => {
+    setToastVisible(false);
+  };
+
   // Load theme on startup
   useEffect(() => {
     const root = document.documentElement;
@@ -56,11 +89,111 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Restore cart and promo state after OAuth redirects or page reloads.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const raw = localStorage.getItem(CART_STORAGE_KEY);
+        if (raw) {
+          const stored = JSON.parse(raw) as Partial<StoredCartState>;
+          if (Array.isArray(stored.cart)) {
+            setCart(
+              stored.cart.filter(
+                (item): item is CartItem =>
+                  Boolean(item?.product?.id) &&
+                  Number.isFinite(item?.qty) &&
+                  item.qty > 0
+              )
+            );
+          }
+          setPromoDiscount(
+            typeof stored.promoDiscount === "number" ? stored.promoDiscount : 0
+          );
+          setPromoCodeText(
+            typeof stored.promoCodeText === "string" ? stored.promoCodeText : ""
+          );
+        }
+      } catch (err) {
+        console.warn("[cart] Failed to restore saved cart:", err);
+        localStorage.removeItem(CART_STORAGE_KEY);
+      } finally {
+        setHasHydratedCart(true);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!hasHydratedCart) return;
+
+    const state: StoredCartState = {
+      cart,
+      promoDiscount,
+      promoCodeText,
+    };
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
+  }, [cart, hasHydratedCart, promoDiscount, promoCodeText]);
+
+  useEffect(() => {
+    if (!hasHydratedCart || isAuthLoading || !user || cart.length === 0) return;
+
+    const timer = setTimeout(() => {
+      if (localStorage.getItem(POST_LOGIN_ACTION_KEY) !== "checkout") return;
+      localStorage.removeItem(POST_LOGIN_ACTION_KEY);
+      setIsCartOpen(false);
+      setIsCheckoutOpen(true);
+      triggerToast("Welcome back. Your bag is ready for checkout.", "shopping-bag");
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [cart.length, hasHydratedCart, isAuthLoading, user]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (isAuthLoading) return;
+
+      if (!user) {
+        setOrders([]);
+        setOrdersError(null);
+        setIsLoadingOrders(false);
+        return;
+      }
+
+      setIsLoadingOrders(true);
+      setOrdersError(null);
+
+      void fetchMyOrders()
+        .then((data) => {
+          if (!cancelled) {
+            setOrders(
+              data.map((order) => ({
+                ...order,
+                recipient: displayName || "Customer",
+              }))
+            );
+          }
+        })
+        .catch((err: Error) => {
+          if (!cancelled) {
+            setOrdersError(err.message ?? "Unable to load order history.");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoadingOrders(false);
+        });
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [displayName, isAuthLoading, user]);
+
   // Fetch products from Supabase on mount
   useEffect(() => {
     let cancelled = false;
-    setIsLoadingProducts(true);
-    setProductsError(null);
     fetchProducts()
       .then((data) => {
         if (!cancelled) {
@@ -80,16 +213,6 @@ export default function Home() {
     };
   }, []);
 
-  const triggerToast = (message: string, iconName = "info") => {
-    setToastMessage(message);
-    setToastIcon(iconName);
-    setToastVisible(true);
-  };
-
-  const handleDismissToast = () => {
-    setToastVisible(false);
-  };
-
   const handleToggleTheme = () => {
     const root = document.documentElement;
     const nextDark = !isDark;
@@ -103,6 +226,26 @@ export default function Home() {
       root.classList.remove("dark");
       localStorage.setItem("theme", "light");
       triggerToast("Light theme applied", "moon");
+    }
+  };
+
+  const handleSignInWithGitHub = async () => {
+    try {
+      await signInWithGitHub();
+    } catch (err) {
+      triggerToast(
+        err instanceof Error ? err.message : "Unable to start GitHub sign in",
+        "alert-circle"
+      );
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      triggerToast("Signed out successfully", "log-out");
+    } catch (err) {
+      triggerToast(err instanceof Error ? err.message : "Unable to sign out", "alert-circle");
     }
   };
 
@@ -167,22 +310,55 @@ export default function Home() {
 
   const handleProceedToCheckout = () => {
     if (cart.length === 0) return;
+    if (isAuthLoading) {
+      triggerToast("Checking your sign-in session. Please try again in a moment.", "loader");
+      return;
+    }
+    if (!user) {
+      localStorage.setItem(POST_LOGIN_ACTION_KEY, "checkout");
+      setIsCartOpen(false);
+      triggerToast("Please sign in before confirming your order.", "user-circle");
+      void handleSignInWithGitHub();
+      return;
+    }
     setIsCartOpen(false);
     setIsCheckoutOpen(true);
   };
 
+  const handleHistoryClick = () => {
+    if (isAuthLoading) {
+      triggerToast("Checking your sign-in session. Please try again in a moment.", "loader");
+      return;
+    }
+
+    if (!user) {
+      triggerToast("Please sign in to view your purchase history.", "user-circle");
+      void handleSignInWithGitHub();
+      return;
+    }
+
+    setIsHistoryOpen(true);
+  };
+
+  const handleRequireSignInForOrder = () => {
+    setIsCheckoutOpen(false);
+    triggerToast("Please sign in before confirming your order.", "user-circle");
+  };
+
   const handleCheckoutSuccess = (
+    orderId: string,
     recipientName: string,
     recipientEmail: string,
     recipientAddress: string
   ) => {
+    void recipientEmail;
     const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.qty, 0);
     const discountVal = subtotal * promoDiscount;
     const finalSubtotal = subtotal - discountVal;
     const taxVal = finalSubtotal * 0.0825;
     const totalVal = finalSubtotal + taxVal;
 
-    const receiptId = "#ZN-" + Math.floor(10000 + Math.random() * 90000);
+    const receiptId = `#ZN-${orderId.slice(0, 8).toUpperCase()}`;
     const receiptDate = new Date().toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
@@ -204,23 +380,39 @@ export default function Home() {
     setOrders((prev) => [newOrder, ...prev]);
     setCurrentOrder(newOrder);
     setCart([]);
+    setPromoDiscount(0);
+    setPromoCodeText("");
+    localStorage.removeItem(POST_LOGIN_ACTION_KEY);
     setIsCheckoutOpen(false);
     setIsSuccessOpen(true);
     triggerToast("Payment Authorized. Order Confirmed!", "check-circle");
   };
 
-  const handleAddReview = (
+  const handleAddReview = async (
     productId: string,
-    reviewData: { author: string; rating: number; comment: string }
+    reviewData: { rating: number; comment: string; displayName?: string | null }
   ) => {
+    if (!user) {
+      triggerToast("Please sign in before submitting a review.", "user-circle");
+      await handleSignInWithGitHub();
+      return;
+    }
+
+    const savedReview = await createReview({
+      product_id: productId,
+      user_id: user.id,
+      rating: reviewData.rating,
+      comment: reviewData.comment,
+      display_name: reviewData.displayName,
+    });
+    const reviewAuthor = reviewData.displayName?.trim() || savedReview.author;
+
     setProducts((prevProducts) =>
       prevProducts.map((p) => {
         if (p.id === productId) {
           const newReview = {
-            author: reviewData.author,
-            rating: reviewData.rating,
-            date: new Date().toISOString().split("T")[0],
-            comment: reviewData.comment,
+            ...savedReview,
+            author: reviewAuthor,
           };
           const updatedReviews = [newReview, ...p.reviews];
           const totalRating = updatedReviews.reduce((sum, r) => sum + r.rating, 0);
@@ -243,7 +435,7 @@ export default function Home() {
       })
     );
 
-    triggerToast("Review published successfully!", "check-circle");
+    triggerToast("Review saved successfully!", "check-circle");
   };
 
   const handleResetFilters = () => {
@@ -275,8 +467,12 @@ export default function Home() {
         isDark={isDark}
         toggleTheme={handleToggleTheme}
         onCartClick={() => setIsCartOpen(true)}
-        onHistoryClick={() => setIsHistoryOpen(true)}
-        onResetFilters={handleResetFilters}
+        onHistoryClick={handleHistoryClick}
+        isAuthLoading={isAuthLoading}
+        isAuthenticated={Boolean(user)}
+        authUserName={displayName}
+        onSignInWithGitHub={handleSignInWithGitHub}
+        onSignOut={handleSignOut}
       />
 
       {/* Main Content Area */}
@@ -372,6 +568,12 @@ export default function Home() {
           onClose={() => setSelectedProduct(null)}
           onAddToCart={handleAddToCart}
           onAddReview={handleAddReview}
+          isReviewAuthenticated={Boolean(user)}
+          reviewerName={displayName}
+          onRequireSignInForReview={() => {
+            triggerToast("Please sign in before submitting a review.", "user-circle");
+            void handleSignInWithGitHub();
+          }}
         />
       )}
 
@@ -397,6 +599,8 @@ export default function Home() {
           cart={cart}
           onClose={() => setIsCheckoutOpen(false)}
           promoDiscount={promoDiscount}
+          userId={user?.id ?? null}
+          onRequireSignIn={handleRequireSignInForOrder}
           onCheckoutSuccess={handleCheckoutSuccess}
         />
       )}
@@ -416,6 +620,8 @@ export default function Home() {
           key="history-modal"
           isOpen={isHistoryOpen}
           orders={orders}
+          isLoading={isLoadingOrders}
+          error={ordersError}
           onClose={() => setIsHistoryOpen(false)}
         />
       )}

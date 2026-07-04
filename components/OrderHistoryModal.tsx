@@ -1,18 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Receipt, Package, MapPin, FolderOpen } from "lucide-react";
+import { X, Receipt, Package, MapPin, FolderOpen, Loader2, AlertCircle } from "lucide-react";
 import { CompletedOrder } from "./ReceiptModal";
 
 interface OrderHistoryModalProps {
   isOpen: boolean;
   orders: CompletedOrder[];
+  isLoading?: boolean;
+  error?: string | null;
   onClose: () => void;
 }
 
 export default function OrderHistoryModal({
   isOpen,
   orders,
+  isLoading = false,
+  error = null,
   onClose,
 }: OrderHistoryModalProps) {
   const [animateShow, setAnimateShow] = useState(false);
@@ -58,12 +62,24 @@ export default function OrderHistoryModal({
           <Receipt className="w-5 h-5 text-green-500" /> Your Purchase History
         </h3>
 
-        {orders.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Loader2 className="w-9 h-9 text-brand-500 animate-spin mb-3" />
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Loading your orders...
+            </p>
+          </div>
+        ) : error ? (
+          <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-300 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        ) : orders.length === 0 ? (
           /* History Empty State */
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <FolderOpen className="w-10 h-10 text-slate-305 dark:text-slate-700 mb-2" />
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              You haven&apos;t purchased anything in this session yet.
+              You haven&apos;t purchased anything yet.
             </p>
           </div>
         ) : (

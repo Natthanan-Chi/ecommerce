@@ -1,432 +1,684 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import Link from "next/link";
-import {
-  Plus,
-  Search,
-  Eye,
-  Pencil,
-  Trash2,
-  Package,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  AlertTriangle,
-  RefreshCw,
-} from "lucide-react";
-import {
-  fetchAllProducts,
-  deleteProduct,
-  type AdminProduct,
-} from "../../data/products";
+import React, { useState, useEffect } from "react";
+import { createReview, fetchMyOrders, fetchProducts, Product } from "../../data/products";
+import Header from "../../components/Header";
+import Catalog from "../../components/Catalog";
+import ProductDetailModal from "../../components/ProductDetailModal";
+import CartDrawer from "../../components/CartDrawer";
+import CheckoutModal from "../../components/CheckoutModal";
+import ReceiptModal, { CompletedOrder } from "../../components/ReceiptModal";
+import OrderHistoryModal from "../../components/OrderHistoryModal";
+import Toast from "../../components/Toast";
+import { Layers3, Loader2, PackageCheck, SlidersHorizontal, Sparkles, Tag } from "lucide-react";
+import { useAuth } from "../../components/AuthProvider";
 
-// ── Delete confirmation modal ────────────────────────────────────────────────
+const CART_STORAGE_KEY = "zenith:cart-state";
+const POST_LOGIN_ACTION_KEY = "zenith:post-login-action";
 
-function DeleteModal({
-  product,
-  onConfirm,
-  onCancel,
-  loading,
-}: {
-  product: AdminProduct;
-  onConfirm: () => void;
-  onCancel: () => void;
-  loading: boolean;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-fade-in">
-        <div className="flex items-start gap-3 mb-4">
-          <div className="w-10 h-10 bg-red-950/60 rounded-xl flex items-center justify-center shrink-0">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
-          </div>
-          <div>
-            <h3 className="font-bold text-white text-base">Deactivate Product</h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              The product will be hidden from the storefront
-            </p>
-          </div>
-        </div>
-        <p className="text-sm text-slate-300 mb-6">
-          Are you sure you want to deactivate{" "}
-          <span className="font-semibold text-white">{product.title}</span>? Customers
-          will no longer see it.
-        </p>
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            disabled={loading}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700 transition cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-600 hover:bg-red-500 text-white transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Trash2 className="w-4 h-4" />
-            )}
-            Deactivate
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+type CartItem = { product: Product; qty: number };
+
+interface StoredCartState {
+  cart: CartItem[];
+  promoDiscount: number;
+  promoCodeText: string;
 }
-
-// ── Stat card ────────────────────────────────────────────────────────────────
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  color,
-}: {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-  color: string;
-}) {
-  return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex items-center gap-4">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-slate-800 ${color}`}>
-        <Icon className="w-5 h-5" />
-      </div>
-      <div>
-        <p className="text-2xl font-extrabold text-white">{value}</p>
-        <p className="text-[11px] text-slate-500">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-// ── Main page ────────────────────────────────────────────────────────────────
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<AdminProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
-  const [deleteTarget, setDeleteTarget] = useState<AdminProduct | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const {
+    isLoading: isAuthLoading,
+    user,
+    displayName,
+    signInWithGitHub,
+    signOut,
+  } = useAuth();
 
-  const load = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      setProducts(await fetchAllProducts());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load products");
-    } finally {
-      setLoading(false);
-    }
+  // Catalog State
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortOption, setSortOption] = useState("featured");
+
+  // Cart State
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [promoCodeText, setPromoCodeText] = useState("");
+  const [hasHydratedCart, setHasHydratedCart] = useState(false);
+
+  // Orders State
+  const [orders, setOrders] = useState<CompletedOrder[]>([]);
+  const [currentOrder, setCurrentOrder] = useState<CompletedOrder | null>(null);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+
+  // Modals Visibility
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isSuccessOpen, setIsSuccessOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Theme State
+  const [isDark, setIsDark] = useState(false);
+
+  // Toast State
+  const [toastMessage, setToastMessage] = useState("");
+  const [toastIcon, setToastIcon] = useState("info");
+  const [toastVisible, setToastVisible] = useState(false);
+
+  const triggerToast = (message: string, iconName = "info") => {
+    setToastMessage(message);
+    setToastIcon(iconName);
+    setToastVisible(true);
   };
 
+  const handleDismissToast = () => {
+    setToastVisible(false);
+  };
+
+  // Load theme on startup
   useEffect(() => {
-    load();
+    const root = document.documentElement;
+    const hasDarkClass = root.classList.contains("dark");
+    const timer = setTimeout(() => {
+      setIsDark(hasDarkClass);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
-  const filtered = useMemo(() => {
-    return products.filter((p) => {
-      const q = search.toLowerCase();
-      const matchSearch =
-        !q ||
-        p.title.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q) ||
-        (p.categories?.name ?? "").toLowerCase().includes(q);
-      const matchStatus =
-        statusFilter === "all" ||
-        (statusFilter === "active" && p.is_active) ||
-        (statusFilter === "inactive" && !p.is_active);
-      return matchSearch && matchStatus;
-    });
-  }, [products, search, statusFilter]);
+  // Restore cart and promo state after OAuth redirects or page reloads.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const raw = localStorage.getItem(CART_STORAGE_KEY);
+        if (raw) {
+          const stored = JSON.parse(raw) as Partial<StoredCartState>;
+          if (Array.isArray(stored.cart)) {
+            setCart(
+              stored.cart.filter(
+                (item): item is CartItem =>
+                  Boolean(item?.product?.id) &&
+                  Number.isFinite(item?.qty) &&
+                  item.qty > 0
+              )
+            );
+          }
+          setPromoDiscount(
+            typeof stored.promoDiscount === "number" ? stored.promoDiscount : 0
+          );
+          setPromoCodeText(
+            typeof stored.promoCodeText === "string" ? stored.promoCodeText : ""
+          );
+        }
+      } catch (err) {
+        console.warn("[cart] Failed to restore saved cart:", err);
+        localStorage.removeItem(CART_STORAGE_KEY);
+      } finally {
+        setHasHydratedCart(true);
+      }
+    }, 0);
 
-  const stats = useMemo(
-    () => ({
-      total: products.length,
-      active: products.filter((p) => p.is_active).length,
-      inactive: products.filter((p) => !p.is_active).length,
-      outOfStock: products.filter((p) => p.stock_qty === 0).length,
-    }),
-    [products]
-  );
+    return () => clearTimeout(timer);
+  }, []);
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await deleteProduct(deleteTarget.id);
-      setProducts((prev) =>
-        prev.map((p) => (p.id === deleteTarget.id ? { ...p, is_active: false } : p))
-      );
-      setDeleteTarget(null);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to deactivate");
-    } finally {
-      setDeleting(false);
+  useEffect(() => {
+    if (!hasHydratedCart) return;
+
+    const state: StoredCartState = {
+      cart,
+      promoDiscount,
+      promoCodeText,
+    };
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(state));
+  }, [cart, hasHydratedCart, promoDiscount, promoCodeText]);
+
+  useEffect(() => {
+    if (!hasHydratedCart || isAuthLoading || !user || cart.length === 0) return;
+
+    const timer = setTimeout(() => {
+      if (localStorage.getItem(POST_LOGIN_ACTION_KEY) !== "checkout") return;
+      localStorage.removeItem(POST_LOGIN_ACTION_KEY);
+      setIsCartOpen(false);
+      setIsCheckoutOpen(true);
+      triggerToast("Welcome back. Your bag is ready for checkout.", "shopping-bag");
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [cart.length, hasHydratedCart, isAuthLoading, user]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (isAuthLoading) return;
+
+      if (!user) {
+        setOrders([]);
+        setOrdersError(null);
+        setIsLoadingOrders(false);
+        return;
+      }
+
+      setIsLoadingOrders(true);
+      setOrdersError(null);
+
+      void fetchMyOrders()
+        .then((data) => {
+          if (!cancelled) {
+            setOrders(
+              data.map((order) => ({
+                ...order,
+                recipient: displayName || "Customer",
+              }))
+            );
+          }
+        })
+        .catch((err: Error) => {
+          if (!cancelled) {
+            setOrdersError(err.message ?? "Unable to load order history.");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoadingOrders(false);
+        });
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [displayName, isAuthLoading, user]);
+
+  // Fetch products from Supabase on mount
+  useEffect(() => {
+    let cancelled = false;
+    fetchProducts()
+      .then((data) => {
+        if (!cancelled) {
+          setProducts(data);
+        }
+      })
+      .catch((err: Error) => {
+        if (!cancelled) {
+          setProductsError(err.message ?? "Failed to load products");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingProducts(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleToggleTheme = () => {
+    const root = document.documentElement;
+    const nextDark = !isDark;
+    setIsDark(nextDark);
+
+    if (nextDark) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+      triggerToast("Dark theme applied", "sun");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+      triggerToast("Light theme applied", "moon");
     }
   };
 
-  const thumbOf = (p: AdminProduct) =>
-    p.product_images.find((i) => i.is_main)?.image_url ??
-    p.product_images[0]?.image_url ??
-    null;
+  const handleSignInWithGitHub = async () => {
+    try {
+      await signInWithGitHub();
+    } catch (err) {
+      triggerToast(
+        err instanceof Error ? err.message : "Unable to start GitHub sign in",
+        "alert-circle"
+      );
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      triggerToast("Signed out successfully", "log-out");
+    } catch (err) {
+      triggerToast(err instanceof Error ? err.message : "Unable to sign out", "alert-circle");
+    }
+  };
+
+  const handleAddToCart = (productId: string, qty = 1) => {
+    const targetProduct = products.find((p) => p.id === productId);
+    if (!targetProduct) return;
+
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product.id === productId);
+      if (existing) {
+        return prev.map((item) =>
+          item.product.id === productId
+            ? { ...item, qty: item.qty + qty }
+            : item
+        );
+      } else {
+        return [...prev, { product: targetProduct!, qty }];
+      }
+    });
+
+    triggerToast(`Added ${qty}x ${targetProduct.title} to Bag`, "shopping-bag");
+  };
+
+  const handleAdjustCartQty = (productId: string, amount: number) => {
+    setCart((prev) => {
+      const item = prev.find((i) => i.product.id === productId);
+      if (!item) return prev;
+
+      const nextQty = item.qty + amount;
+      if (nextQty <= 0) {
+        triggerToast(`Removed ${item.product.title} from Bag`, "trash-2");
+        return prev.filter((i) => i.product.id !== productId);
+      }
+
+      return prev.map((i) =>
+        i.product.id === productId ? { ...i, qty: nextQty } : i
+      );
+    });
+  };
+
+  const handleRemoveCartItem = (productId: string) => {
+    const item = cart.find((i) => i.product.id === productId);
+    if (!item) return;
+
+    setCart((prev) => prev.filter((i) => i.product.id !== productId));
+    triggerToast(`Removed ${item.product.title} from Bag`, "trash-2");
+  };
+
+  const handleApplyPromo = (code: string) => {
+    if (code === "ZENITH20") {
+      setPromoDiscount(0.2); // 20% off
+      setPromoCodeText("ZENITH20");
+      triggerToast("Promo code applied: 20% discount!", "gift");
+    } else if (code === "") {
+      setPromoDiscount(0);
+      setPromoCodeText("");
+    } else {
+      setPromoDiscount(0);
+      setPromoCodeText("");
+    }
+  };
+
+  const handleProceedToCheckout = () => {
+    if (cart.length === 0) return;
+    if (isAuthLoading) {
+      triggerToast("Checking your sign-in session. Please try again in a moment.", "loader");
+      return;
+    }
+    if (!user) {
+      localStorage.setItem(POST_LOGIN_ACTION_KEY, "checkout");
+      setIsCartOpen(false);
+      triggerToast("Please sign in before confirming your order.", "user-circle");
+      void handleSignInWithGitHub();
+      return;
+    }
+    setIsCartOpen(false);
+    setIsCheckoutOpen(true);
+  };
+
+  const handleHistoryClick = () => {
+    if (isAuthLoading) {
+      triggerToast("Checking your sign-in session. Please try again in a moment.", "loader");
+      return;
+    }
+
+    if (!user) {
+      triggerToast("Please sign in to view your purchase history.", "user-circle");
+      void handleSignInWithGitHub();
+      return;
+    }
+
+    setIsHistoryOpen(true);
+  };
+
+  const handleRequireSignInForOrder = () => {
+    setIsCheckoutOpen(false);
+    triggerToast("Please sign in before confirming your order.", "user-circle");
+  };
+
+  const handleCheckoutSuccess = (
+    orderId: string,
+    recipientName: string,
+    recipientEmail: string,
+    recipientAddress: string
+  ) => {
+    void recipientEmail;
+    const subtotal = cart.reduce((sum, item) => sum + item.product.price * item.qty, 0);
+    const discountVal = subtotal * promoDiscount;
+    const finalSubtotal = subtotal - discountVal;
+    const taxVal = finalSubtotal * 0.0825;
+    const totalVal = finalSubtotal + taxVal;
+
+    const receiptId = `#ZN-${orderId.slice(0, 8).toUpperCase()}`;
+    const receiptDate = new Date().toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    const newOrder: CompletedOrder = {
+      id: receiptId,
+      date: receiptDate,
+      recipient: recipientName,
+      address: recipientAddress,
+      items: [...cart],
+      subtotal,
+      discount: discountVal,
+      tax: taxVal,
+      total: totalVal,
+    };
+
+    setOrders((prev) => [newOrder, ...prev]);
+    setCurrentOrder(newOrder);
+    setCart([]);
+    setPromoDiscount(0);
+    setPromoCodeText("");
+    localStorage.removeItem(POST_LOGIN_ACTION_KEY);
+    setIsCheckoutOpen(false);
+    setIsSuccessOpen(true);
+    triggerToast("Payment Authorized. Order Confirmed!", "check-circle");
+  };
+
+  const handleAddReview = async (
+    productId: string,
+    reviewData: { rating: number; comment: string; displayName?: string | null }
+  ) => {
+    if (!user) {
+      triggerToast("Please sign in before submitting a review.", "user-circle");
+      await handleSignInWithGitHub();
+      return;
+    }
+
+    const savedReview = await createReview({
+      product_id: productId,
+      user_id: user.id,
+      rating: reviewData.rating,
+      comment: reviewData.comment,
+      display_name: reviewData.displayName,
+    });
+    const reviewAuthor = reviewData.displayName?.trim() || savedReview.author;
+
+    setProducts((prevProducts) =>
+      prevProducts.map((p) => {
+        if (p.id === productId) {
+          const newReview = {
+            ...savedReview,
+            author: reviewAuthor,
+          };
+          const updatedReviews = [newReview, ...p.reviews];
+          const totalRating = updatedReviews.reduce((sum, r) => sum + r.rating, 0);
+          const updatedRating = parseFloat((totalRating / updatedReviews.length).toFixed(1));
+
+          const updatedProduct = {
+            ...p,
+            reviews: updatedReviews,
+            rating: updatedRating,
+          };
+
+          // Synchronize details modal view immediately
+          if (selectedProduct && selectedProduct.id === productId) {
+            setSelectedProduct(updatedProduct);
+          }
+
+          return updatedProduct;
+        }
+        return p;
+      })
+    );
+
+    triggerToast("Review saved successfully!", "check-circle");
+  };
+
+  const handleResetFilters = () => {
+    setActiveCategory("All");
+    setSearchQuery("");
+    setSortOption("featured");
+    triggerToast("Catalog filters reset", "filter");
+  };
+
+  const catalogStats = React.useMemo(() => {
+    const categories = new Set(products.map((product) => product.category));
+    const prices = products.map((product) => product.price).filter(Number.isFinite);
+    const saleCount = products.filter(
+      (product) => product.originalPrice > product.price
+    ).length;
+
+    return {
+      total: products.length,
+      categories: categories.size,
+      saleCount,
+      minPrice: prices.length > 0 ? Math.min(...prices) : 0,
+    };
+  }, [products]);
+
+  const cartTotalItems = cart.reduce((sum, item) => sum + item.qty, 0);
 
   return (
-    <div className="p-8 max-w-screen-xl">
-      {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">Products</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Manage your product catalog</p>
-        </div>
-        <Link
-          href="/products/new"
-          id="add-product-btn"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-sm font-bold transition-colors shadow-lg shadow-brand-900/30"
-        >
-          <Plus className="w-4 h-4" />
-          Add Product
-        </Link>
-      </div>
+    <>
+      {/* Navigation Header */}
+      <Header
+        searchVal={searchQuery}
+        onSearchChange={setSearchQuery}
+        cartCount={cartTotalItems}
+        hasOrders={orders.length > 0}
+        isDark={isDark}
+        toggleTheme={handleToggleTheme}
+        onCartClick={() => setIsCartOpen(true)}
+        onHistoryClick={handleHistoryClick}
+        isAuthLoading={isAuthLoading}
+        isAuthenticated={Boolean(user)}
+        authUserName={displayName}
+        onSignInWithGitHub={handleSignInWithGitHub}
+        onSignOut={handleSignOut}
+      />
 
-      {/* ── Stats ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total Products" value={stats.total} icon={Package} color="text-slate-400" />
-        <StatCard label="Active" value={stats.active} icon={CheckCircle} color="text-green-400" />
-        <StatCard label="Inactive" value={stats.inactive} icon={XCircle} color="text-red-400" />
-        <StatCard label="Out of Stock" value={stats.outOfStock} icon={AlertTriangle} color="text-amber-400" />
-      </div>
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section className="mb-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-600 dark:text-brand-400 mb-3">
+                Customer Catalog
+              </p>
+              <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950 dark:text-white">
+                Products
+              </h1>
+              <p className="mt-3 text-sm sm:text-base leading-7 text-slate-600 dark:text-slate-400">
+                Browse the full Zenith collection with live search, category filters,
+                price sorting, quick view, and cart checkout.
+              </p>
+            </div>
 
-      {/* ── Toolbar ── */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-          <input
-            id="product-search"
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by title, SKU, or category…"
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:w-[520px] gap-3">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
+                <PackageCheck className="w-4 h-4 text-brand-500 mb-2" />
+                <p className="text-xl font-extrabold text-slate-950 dark:text-white">
+                  {catalogStats.total}
+                </p>
+                <p className="text-[11px] font-semibold text-slate-500">Products</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
+                <Layers3 className="w-4 h-4 text-emerald-500 mb-2" />
+                <p className="text-xl font-extrabold text-slate-950 dark:text-white">
+                  {catalogStats.categories}
+                </p>
+                <p className="text-[11px] font-semibold text-slate-500">Categories</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
+                <Tag className="w-4 h-4 text-rose-500 mb-2" />
+                <p className="text-xl font-extrabold text-slate-950 dark:text-white">
+                  {catalogStats.saleCount}
+                </p>
+                <p className="text-[11px] font-semibold text-slate-500">On Sale</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-3">
+                <SlidersHorizontal className="w-4 h-4 text-amber-500 mb-2" />
+                <p className="text-xl font-extrabold text-slate-950 dark:text-white">
+                  ${catalogStats.minPrice.toFixed(0)}
+                </p>
+                <p className="text-[11px] font-semibold text-slate-500">From</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Dynamic Products Catalog */}
+        {isLoadingProducts ? (
+          <div className="flex flex-col items-center justify-center py-32 text-slate-400 dark:text-slate-600">
+            <Loader2 className="w-10 h-10 animate-spin mb-3" />
+            <p className="text-sm font-medium">Loading products&hellip;</p>
+          </div>
+        ) : productsError ? (
+          <div className="flex flex-col items-center justify-center py-32 text-center">
+            <p className="text-red-500 font-semibold text-sm mb-2">Failed to load products</p>
+            <p className="text-slate-400 text-xs">{productsError}</p>
+          </div>
+        ) : (
+          <Catalog
+            products={products}
+            onProductClick={(id) => {
+              const prod = products.find((p) => p.id === id) || null;
+              setSelectedProduct(prod);
+            }}
+            onAddToCart={(id) => handleAddToCart(id, 1)}
+            activeCategory={activeCategory}
+            onCategoryChange={setActiveCategory}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            sortOption={sortOption}
+            onSortChange={setSortOption}
+            onResetFilters={handleResetFilters}
           />
-        </div>
-        <div className="flex gap-2">
-          {(["all", "active", "inactive"] as const).map((s) => (
-            <button
-              key={s}
-              id={`filter-${s}`}
-              onClick={() => setStatusFilter(s)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold capitalize transition cursor-pointer ${
-                statusFilter === s
-                  ? "bg-brand-600 text-white shadow shadow-brand-900/30"
-                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white"
-              }`}
-            >
-              {s}
-            </button>
-          ))}
-          <button
-            id="refresh-products"
-            onClick={load}
-            title="Refresh"
-            className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 transition cursor-pointer"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+        )}
+      </main>
 
-      {/* ── Table ── */}
-      {loading ? (
-        <div className="flex items-center justify-center py-32 text-slate-500 gap-3">
-          <Loader2 className="w-7 h-7 animate-spin" />
-          <span className="text-sm">Loading products…</span>
-        </div>
-      ) : error ? (
-        <div className="text-center py-32 space-y-2">
-          <p className="text-red-400 font-semibold">{error}</p>
-          <button
-            onClick={load}
-            className="text-brand-400 hover:text-brand-300 text-sm underline cursor-pointer"
-          >
-            Try again
-          </button>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-32 text-slate-500 space-y-2">
-          <Package className="w-12 h-12 mx-auto opacity-20" />
-          <p className="font-medium">No products found</p>
-          <p className="text-sm">Adjust your search or filters</p>
-        </div>
-      ) : (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-800">
-                {["Product", "Category", "Price", "Stock", "Status", ""].map((h) => (
-                  <th
-                    key={h}
-                    className={`text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest px-5 py-4 ${
-                      h === "" ? "text-right" : ""
-                    } ${h === "Category" ? "hidden md:table-cell" : ""} ${
-                      h === "Stock" ? "hidden lg:table-cell" : ""
-                    }`}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((product, idx) => {
-                const thumb = thumbOf(product);
-                const isLast = idx === filtered.length - 1;
-                return (
-                  <tr
-                    key={product.id}
-                    className={`hover:bg-slate-800/50 transition-colors ${
-                      !isLast ? "border-b border-slate-800/60" : ""
-                    }`}
-                  >
-                    {/* Product */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 overflow-hidden">
-                          {thumb ? (
-                            <img
-                              src={thumb}
-                              alt={product.title}
-                              className="w-full h-full object-cover"
-                              onError={(e) =>
-                                ((e.target as HTMLImageElement).style.display = "none")
-                              }
-                            />
-                          ) : (
-                            <Package className="w-5 h-5 text-slate-600" />
-                          )}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-white truncate max-w-[180px]">
-                            {product.title}
-                          </p>
-                          <p className="text-[11px] text-slate-500 font-mono">{product.sku}</p>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Category */}
-                    <td className="px-5 py-4 hidden md:table-cell">
-                      {product.categories ? (
-                        <span className="text-xs text-slate-300 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
-                          {product.categories.name}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-slate-600">—</span>
-                      )}
-                    </td>
-
-                    {/* Price */}
-                    <td className="px-5 py-4">
-                      <p className="text-sm font-bold text-white">
-                        ${Number(product.price).toFixed(2)}
-                      </p>
-                      {product.original_price && (
-                        <p className="text-[11px] text-slate-500 line-through">
-                          ${Number(product.original_price).toFixed(2)}
-                        </p>
-                      )}
-                    </td>
-
-                    {/* Stock */}
-                    <td className="px-5 py-4 hidden lg:table-cell">
-                      <span
-                        className={`text-sm font-bold ${
-                          product.stock_qty === 0
-                            ? "text-red-400"
-                            : product.stock_qty < 10
-                            ? "text-amber-400"
-                            : "text-white"
-                        }`}
-                      >
-                        {product.stock_qty}
-                      </span>
-                    </td>
-
-                    {/* Status */}
-                    <td className="px-5 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                          product.is_active
-                            ? "bg-green-950/50 text-green-400 border-green-900"
-                            : "bg-red-950/50 text-red-400 border-red-900"
-                        }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            product.is_active ? "bg-green-400" : "bg-red-400"
-                          }`}
-                        />
-                        {product.is_active ? "Active" : "Inactive"}
-                      </span>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <Link
-                          href={`/products/${product.id}`}
-                          id={`view-${product.id}`}
-                          title="View"
-                          className="p-2 rounded-lg text-slate-500 hover:bg-slate-700 hover:text-white transition"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                        <Link
-                          href={`/products/${product.id}/edit`}
-                          id={`edit-${product.id}`}
-                          title="Edit"
-                          className="p-2 rounded-lg text-slate-500 hover:bg-slate-700 hover:text-white transition"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Link>
-                        <button
-                          id={`delete-${product.id}`}
-                          onClick={() => setDeleteTarget(product)}
-                          title="Deactivate"
-                          className="p-2 rounded-lg text-slate-500 hover:bg-red-950/50 hover:text-red-400 transition cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          <div className="px-5 py-3 border-t border-slate-800 text-xs text-slate-600">
-            Showing {filtered.length} of {products.length} products
+      {/* Footer Details */}
+      <footer className="mt-auto bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 transition-colors">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="md:col-span-2">
+              <div className="flex items-center space-x-2 text-brand-600 dark:text-brand-500 mb-4">
+                <Sparkles className="w-6 h-6 text-brand-500" />
+                <span className="text-lg font-bold tracking-tight text-brand-600 dark:text-brand-500">
+                  ZENITH STORE
+                </span>
+              </div>
+              <p className="text-slate-500 dark:text-slate-400 text-sm max-w-sm leading-relaxed mb-4">
+                A futuristic retail conceptual mockup offering a hyper-fluid buyer interface, dynamic real-time catalog generation, review systems, and realistic checkout pipelines.
+              </p>
+              <p className="text-slate-450 dark:text-slate-500 text-xs">
+                &copy; 2026 Zenith Concepts. Built for modern high-performant web interfaces.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold tracking-wider text-slate-900 dark:text-white mb-4 uppercase">
+                Technology Stack
+              </h4>
+              <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400">
+                <li>Next.js (App Router v16)</li>
+                <li>React 19 Hooks & Components</li>
+                <li>Tailwind CSS (v4 Theme Config)</li>
+                <li>Lucide Vector Icons</li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold tracking-wider text-slate-900 dark:text-white mb-4 uppercase">
+                Demo Support
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-4">
+                You can dynamically test adding products, viewing complex nested reviews, submitting real-time user-generated product ratings, running complete simulated billing procedures, and viewing receipts.
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-950/50 dark:text-green-300">
+                  Demo Mode Active
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </footer>
 
-      {/* ── Delete Modal ── */}
-      {deleteTarget && (
-        <DeleteModal
-          product={deleteTarget}
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
-          loading={deleting}
+      {/* Interactive Overlays/Modals */}
+      {selectedProduct && (
+        <ProductDetailModal
+          key={selectedProduct.id}
+          isOpen={selectedProduct !== null}
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          onAddToCart={handleAddToCart}
+          onAddReview={handleAddReview}
+          isReviewAuthenticated={Boolean(user)}
+          reviewerName={displayName}
+          onRequireSignInForReview={() => {
+            triggerToast("Please sign in before submitting a review.", "user-circle");
+            void handleSignInWithGitHub();
+          }}
         />
       )}
-    </div>
+
+      {isCartOpen && (
+        <CartDrawer
+          key="cart-drawer"
+          isOpen={isCartOpen}
+          cart={cart}
+          onClose={() => setIsCartOpen(false)}
+          onAdjustQty={handleAdjustCartQty}
+          onRemoveItem={handleRemoveCartItem}
+          promoDiscount={promoDiscount}
+          promoCodeText={promoCodeText}
+          onApplyPromo={handleApplyPromo}
+          onProceedToCheckout={handleProceedToCheckout}
+        />
+      )}
+
+      {isCheckoutOpen && (
+        <CheckoutModal
+          key="checkout-modal"
+          isOpen={isCheckoutOpen}
+          cart={cart}
+          onClose={() => setIsCheckoutOpen(false)}
+          promoDiscount={promoDiscount}
+          userId={user?.id ?? null}
+          onRequireSignIn={handleRequireSignInForOrder}
+          onCheckoutSuccess={handleCheckoutSuccess}
+        />
+      )}
+
+      {isSuccessOpen && currentOrder && (
+        <ReceiptModal
+          key={currentOrder.id}
+          isOpen={isSuccessOpen}
+          order={currentOrder}
+          onClose={() => setIsSuccessOpen(false)}
+          onCopyReceipt={() => triggerToast("Receipt copied to clipboard!", "copy")}
+        />
+      )}
+
+      {isHistoryOpen && (
+        <OrderHistoryModal
+          key="history-modal"
+          isOpen={isHistoryOpen}
+          orders={orders}
+          isLoading={isLoadingOrders}
+          error={ordersError}
+          onClose={() => setIsHistoryOpen(false)}
+        />
+      )}
+
+      {/* Custom Toast Notifications */}
+      <Toast
+        message={toastMessage}
+        iconName={toastIcon}
+        visible={toastVisible}
+        onDismiss={handleDismissToast}
+      />
+    </>
   );
 }

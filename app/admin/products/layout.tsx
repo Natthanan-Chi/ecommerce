@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Package, ArrowLeft } from "lucide-react";
-import AdminNav from "../../components/admin/AdminNav";
+import AdminNav from "../../../components/admin/AdminNav";
+import AdminGuard from "../../../components/admin/AdminGuard";
 
 export const metadata = {
   title: "Admin — Zenith Store",
@@ -45,7 +46,9 @@ export default function ProductsLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* ── Main content ─────────────────────────────────────────── */}
-      <div className="flex-1 min-w-0 overflow-auto">{children}</div>
+      <div className="flex-1 min-w-0 overflow-auto">
+        <AdminGuard>{children}</AdminGuard>
+      </div>
     </div>
   );
 }
