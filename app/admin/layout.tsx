@@ -1,20 +1,18 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Package, ArrowLeft } from "lucide-react";
-import AdminNav from "../../../components/admin/AdminNav";
-import AdminGuard from "../../../components/admin/AdminGuard";
+import { ArrowLeft, Package } from "lucide-react";
+import AdminGuard from "../../components/admin/AdminGuard";
+import AdminNav from "../../components/admin/AdminNav";
 
 export const metadata = {
   title: "Admin — Zenith Store",
-  description: "Product management admin panel",
+  description: "Zenith Store admin panel",
 };
 
-export default function ProductsLayout({ children }: { children: ReactNode }) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100">
-      {/* ── Sidebar ──────────────────────────────────────────────── */}
       <aside className="w-64 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col sticky top-0 h-screen overflow-y-auto">
-        {/* Brand header */}
         <div className="px-5 pt-6 pb-5 border-b border-slate-800">
           <Link
             href="/"
@@ -36,16 +34,13 @@ export default function ProductsLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        {/* Navigation — client component for active state */}
         <AdminNav />
 
-        {/* Footer */}
         <div className="px-5 py-3 border-t border-slate-800 mt-auto">
           <p className="text-[10px] text-slate-700 select-none">Zenith Admin v1.0</p>
         </div>
       </aside>
 
-      {/* ── Main content ─────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 overflow-auto">
         <AdminGuard>{children}</AdminGuard>
       </div>

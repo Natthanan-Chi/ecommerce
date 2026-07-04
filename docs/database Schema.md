@@ -97,6 +97,7 @@ Allows authenticated customers to review items and recalculate product ratings.
 | product\_id | UUID | FOREIGN KEY REFERENCES products(id) | Target product |
 | user\_id | UUID | FOREIGN KEY REFERENCES users(id) | Submitting author |
 | rating | INT | NOT NULL, CHECK (rating BETWEEN 1 AND 5\) | Numerical star ranking |
+| display\_name | VARCHAR(80) | NULLABLE | Optional public name shown on storefront; user\_id remains the audit identity |
 | comment | TEXT | NOT NULL | Customer review text |
 | created\_at | TIMESTAMP | DEFAULT CURRENT\_TIMESTAMP | Review submission timestamp |
 

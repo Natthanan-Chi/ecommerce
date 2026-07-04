@@ -80,6 +80,7 @@ CREATE TABLE public.reviews (
     product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    display_name VARCHAR(80),
     comment TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

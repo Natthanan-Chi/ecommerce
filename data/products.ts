@@ -160,6 +160,51 @@ export interface CustomerOrder {
   total: number;
 }
 
+export type OrderStatus = "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+
+export interface AdminOrderItem {
+  quantity: number;
+  unit_price: number;
+  products: { id: string; title: string } | null;
+}
+
+export interface AdminOrder {
+  id: string;
+  user_id: string | null;
+  status: OrderStatus;
+  subtotal: number;
+  discount: number;
+  tax: number;
+  shipping_fee: number;
+  grand_total: number;
+  shipping_address: string;
+  tracking_number: string | null;
+  created_at: string;
+  users: { email: string; first_name: string; last_name: string } | null;
+  order_items: AdminOrderItem[];
+}
+
+export interface AdminReview {
+  id: number;
+  product_id: string;
+  user_id: string;
+  rating: number;
+  comment: string;
+  display_name: string | null;
+  created_at: string;
+  users: { email: string; first_name: string; last_name: string } | null;
+  products: { id: string; title: string } | null;
+}
+
+export interface AccountReview {
+  id: number;
+  rating: number;
+  comment: string;
+  display_name: string | null;
+  created_at: string;
+  products: { id: string; title: string } | null;
+}
+
 export interface ReviewInput {
   product_id: string;
   user_id: string;
@@ -199,6 +244,29 @@ const PRODUCT_SELECT_LEGACY = `
     created_at,
     users ( first_name, last_name )
   )
+`;
+
+const REVIEW_SELECT_WITH_DISPLAY_NAME = `
+  id,
+  product_id,
+  user_id,
+  rating,
+  comment,
+  display_name,
+  created_at,
+  users ( email, first_name, last_name ),
+  products ( id, title )
+`;
+
+const REVIEW_SELECT_LEGACY = `
+  id,
+  product_id,
+  user_id,
+  rating,
+  comment,
+  created_at,
+  users ( email, first_name, last_name ),
+  products ( id, title )
 `;
 
 // ============================================================================
@@ -434,6 +502,55 @@ export async function createReview(input: ReviewInput): Promise<Review> {
   };
 }
 
+export async function fetchMyReviews(userId: string): Promise<AccountReview[]> {
+  const initialResult = await supabase
+    .from("reviews")
+    .select(
+      `
+      id,
+      rating,
+      comment,
+      display_name,
+      created_at,
+      products ( id, title )
+    `
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  let data = initialResult.data as unknown[] | null;
+  let error = initialResult.error;
+
+  if (error && error.message.includes("display_name")) {
+    const legacyResult = await supabase
+      .from("reviews")
+      .select(
+        `
+        id,
+        rating,
+        comment,
+        created_at,
+        products ( id, title )
+      `
+      )
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    data = legacyResult.data as unknown[] | null;
+    error = legacyResult.error;
+  }
+
+  if (error) {
+    console.error("[fetchMyReviews] Supabase error:", error.message);
+    return [];
+  }
+
+  return ((data ?? []) as AccountReview[]).map((review) => ({
+    ...review,
+    display_name: review.display_name ?? null,
+  }));
+}
+
 // ============================================================================
 // ADMIN API
 // ============================================================================
@@ -587,6 +704,90 @@ export async function deleteProduct(id: string): Promise<void> {
     .update({ is_active: false })
     .eq("id", id);
 
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchAdminOrders(): Promise<AdminOrder[]> {
+  const { data, error } = await supabase
+    .from("orders")
+    .select(
+      `
+      id,
+      user_id,
+      status,
+      subtotal,
+      discount,
+      tax,
+      shipping_fee,
+      grand_total,
+      shipping_address,
+      tracking_number,
+      created_at,
+      users ( email, first_name, last_name ),
+      order_items (
+        quantity,
+        unit_price,
+        products ( id, title )
+      )
+    `
+    )
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[fetchAdminOrders] Supabase error:", error.message);
+    return [];
+  }
+
+  return ((data ?? []) as unknown[]) as AdminOrder[];
+}
+
+export async function updateOrderAdminFields(
+  orderId: string,
+  values: { status: OrderStatus; tracking_number: string | null }
+): Promise<void> {
+  const { error } = await supabase
+    .from("orders")
+    .update({
+      status: values.status,
+      tracking_number: values.tracking_number,
+    })
+    .eq("id", orderId);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function fetchAdminReviews(): Promise<AdminReview[]> {
+  const initialResult = await supabase
+    .from("reviews")
+    .select(REVIEW_SELECT_WITH_DISPLAY_NAME)
+    .order("created_at", { ascending: false });
+
+  let data = initialResult.data as unknown[] | null;
+  let error = initialResult.error;
+
+  if (error && error.message.includes("display_name")) {
+    const legacyResult = await supabase
+      .from("reviews")
+      .select(REVIEW_SELECT_LEGACY)
+      .order("created_at", { ascending: false });
+
+    data = legacyResult.data as unknown[] | null;
+    error = legacyResult.error;
+  }
+
+  if (error) {
+    console.error("[fetchAdminReviews] Supabase error:", error.message);
+    return [];
+  }
+
+  return ((data ?? []) as AdminReview[]).map((review) => ({
+    ...review,
+    display_name: review.display_name ?? null,
+  }));
+}
+
+export async function deleteReview(reviewId: number): Promise<void> {
+  const { error } = await supabase.from("reviews").delete().eq("id", reviewId);
   if (error) throw new Error(error.message);
 }
 

@@ -75,6 +75,16 @@ export default function Header({
             >
               Products
             </Link>
+            <Link
+              href="/account"
+              className={`px-3 py-2 rounded-full text-xs font-bold transition ${
+                pathname === "/account"
+                  ? "bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300"
+                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              }`}
+            >
+              Account
+            </Link>
           </nav>
         </div>
 
