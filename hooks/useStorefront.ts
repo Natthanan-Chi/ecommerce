@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../components/AuthProvider";
 import {
   createReview,
@@ -26,9 +27,9 @@ export function useStorefront() {
     isLoading: isAuthLoading,
     user,
     displayName,
-    signInWithGitHub,
     signOut,
   } = useAuth();
+  const router = useRouter();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -208,21 +209,15 @@ export function useStorefront() {
     }
   };
 
-  const handleSignInWithGitHub = async () => {
-    try {
-      await signInWithGitHub();
-    } catch (err) {
-      triggerToast(
-        err instanceof Error ? err.message : "Unable to start GitHub sign in",
-        "alert-circle"
-      );
-    }
+  const handleSignIn = () => {
+    router.push("/login");
   };
 
   const handleSignOut = async () => {
     try {
       await signOut();
       triggerToast("Signed out successfully", "log-out");
+      router.push("/login");
     } catch (err) {
       triggerToast(err instanceof Error ? err.message : "Unable to sign out", "alert-circle");
     }
@@ -294,7 +289,7 @@ export function useStorefront() {
       localStorage.setItem(POST_LOGIN_ACTION_KEY, "checkout");
       setIsCartOpen(false);
       triggerToast("Please sign in before confirming your order.", "user-circle");
-      void handleSignInWithGitHub();
+      handleSignIn();
       return;
     }
     setIsCartOpen(false);
@@ -309,7 +304,7 @@ export function useStorefront() {
 
     if (!user) {
       triggerToast("Please sign in to view your purchase history.", "user-circle");
-      void handleSignInWithGitHub();
+      handleSignIn();
       return;
     }
 
@@ -370,7 +365,7 @@ export function useStorefront() {
   ) => {
     if (!user) {
       triggerToast("Please sign in before submitting a review.", "user-circle");
-      await handleSignInWithGitHub();
+      handleSignIn();
       return;
     }
 
@@ -425,7 +420,7 @@ export function useStorefront() {
       isAuthLoading,
       user,
       displayName,
-      handleSignInWithGitHub,
+      handleSignInWithGitHub: handleSignIn,
       handleSignOut,
     },
     products,

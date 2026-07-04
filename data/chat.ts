@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabase";
 
-export type ChatThreadStatus = "open" | "waiting_customer" | "resolved";
+export type ChatThreadStatus = "open" | "waiting_admin" | "waiting_customer" | "resolved";
 export type ChatSenderRole = "customer" | "admin" | "staff" | "support";
 
 export interface ChatMessage {
@@ -36,6 +36,18 @@ export interface AdminChatThread extends ChatThread {
   } | null;
   chat_messages: ChatMessage[];
 }
+
+export interface AdminChatSummary {
+  total: number;
+  unread: number;
+  waitingAdmin: number;
+  waitingCustomer: number;
+  resolved: number;
+  orderLinked: number;
+  general: number;
+}
+
+export type ChatRealtimeStatus = "subscribed" | "closed" | "channel_error" | "timed_out";
 
 const THREAD_SELECT = `
   id,
@@ -207,14 +219,154 @@ export async function fetchAdminChatThreads(): Promise<AdminChatThread[]> {
   }));
 }
 
+export async function fetchAdminChatSummary(): Promise<AdminChatSummary> {
+  const { data, error } = await supabase
+    .from("chat_threads")
+    .select(
+      `
+      id,
+      order_id,
+      status,
+      chat_messages (
+        sender_role,
+        read_at
+      )
+    `
+    );
+
+  if (error) {
+    console.warn("[fetchAdminChatSummary]", error.message);
+    return {
+      total: 0,
+      unread: 0,
+      waitingAdmin: 0,
+      waitingCustomer: 0,
+      resolved: 0,
+      orderLinked: 0,
+      general: 0,
+    };
+  }
+
+  const threads = ((data ?? []) as unknown[]) as {
+    order_id: string | null;
+    status: ChatThreadStatus;
+    chat_messages?: Pick<ChatMessage, "sender_role" | "read_at">[];
+  }[];
+
+  return threads.reduce<AdminChatSummary>(
+    (summary, thread) => {
+      summary.total += 1;
+      if (thread.order_id) summary.orderLinked += 1;
+      else summary.general += 1;
+      if (thread.status === "waiting_admin") summary.waitingAdmin += 1;
+      if (thread.status === "waiting_customer") summary.waitingCustomer += 1;
+      if (thread.status === "resolved") summary.resolved += 1;
+      summary.unread += (thread.chat_messages ?? []).filter(
+        (message) => message.sender_role === "customer" && !message.read_at
+      ).length;
+      return summary;
+    },
+    {
+      total: 0,
+      unread: 0,
+      waitingAdmin: 0,
+      waitingCustomer: 0,
+      resolved: 0,
+      orderLinked: 0,
+      general: 0,
+    }
+  );
+}
+
 export async function updateChatThreadStatus(
   threadId: string,
-  status: ChatThreadStatus
+  status: ChatThreadStatus,
+  fallbackStatus?: ChatThreadStatus
 ): Promise<void> {
   const { error } = await supabase
     .from("chat_threads")
     .update({ status, updated_at: new Date().toISOString() })
     .eq("id", threadId);
 
+  const isConstraintError =
+    error &&
+    (error.message.toLowerCase().includes("check constraint") ||
+      error.message.toLowerCase().includes("violates check"));
+
+  if (isConstraintError && fallbackStatus) {
+    const retry = await supabase
+      .from("chat_threads")
+      .update({ status: fallbackStatus, updated_at: new Date().toISOString() })
+      .eq("id", threadId);
+
+    if (retry.error) throw new Error(retry.error.message);
+    return;
+  }
+
   if (error) throw new Error(error.message);
+}
+
+export function subscribeToCustomerThread(
+  threadId: string,
+  onChange: () => void,
+  onStatus?: (status: ChatRealtimeStatus) => void
+): () => void {
+  const channel = supabase
+    .channel(`customer-chat-thread:${threadId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "chat_messages",
+        filter: `thread_id=eq.${threadId}`,
+      },
+      onChange
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "chat_threads",
+        filter: `id=eq.${threadId}`,
+      },
+      onChange
+    )
+    .subscribe((status) => {
+      onStatus?.(status.toLowerCase() as ChatRealtimeStatus);
+    });
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
+
+export function subscribeToAdminChatChanges(
+  onChange: () => void,
+  onStatus?: (status: ChatRealtimeStatus) => void
+): () => void {
+  const channelName =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? `admin-chat-inbox:${crypto.randomUUID()}`
+      : `admin-chat-inbox:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  const channel = supabase
+    .channel(channelName)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "chat_threads" },
+      onChange
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "chat_messages" },
+      onChange
+    )
+    .subscribe((status) => {
+      onStatus?.(status.toLowerCase() as ChatRealtimeStatus);
+    });
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
 }

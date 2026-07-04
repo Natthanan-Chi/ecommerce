@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.chat_threads (
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   order_id UUID NULL REFERENCES public.orders(id) ON DELETE SET NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'open'
-    CHECK (status IN ('open', 'waiting_customer', 'resolved')),
+    CHECK (status IN ('open', 'waiting_admin', 'waiting_customer', 'resolved')),
   last_message_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

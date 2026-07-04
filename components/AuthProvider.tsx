@@ -18,6 +18,8 @@ interface AuthContextValue {
   displayName: string;
   avatarUrl: string | null;
   signInWithGitHub: (options?: { next?: string }) => Promise<void>;
+  signInWithEmailPassword: (email: string, password: string) => Promise<void>;
+  signUpWithEmailPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -88,6 +90,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) throw new Error(error.message);
   }, []);
 
+  const signInWithEmailPassword = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (error) throw new Error(error.message);
+  }, []);
+
+  const signUpWithEmailPassword = useCallback(async (email: string, password: string) => {
+    const normalizedEmail = email.trim();
+    const name = normalizedEmail.split("@")[0] || "Customer";
+    const { error } = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password,
+      options: {
+        data: {
+          full_name: name,
+          name,
+        },
+      },
+    });
+
+    if (error) throw new Error(error.message);
+  }, []);
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw new Error(error.message);
@@ -103,9 +131,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       displayName: nameFromUser(user),
       avatarUrl: avatarFromUser(user),
       signInWithGitHub,
+      signInWithEmailPassword,
+      signUpWithEmailPassword,
       signOut,
     }),
-    [isLoading, session, user, signInWithGitHub, signOut]
+    [
+      isLoading,
+      session,
+      user,
+      signInWithGitHub,
+      signInWithEmailPassword,
+      signUpWithEmailPassword,
+      signOut,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

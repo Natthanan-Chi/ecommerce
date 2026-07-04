@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
   ClipboardList,
@@ -16,15 +16,25 @@ import {
   fetchAdminChatThreads,
   markThreadMessagesRead,
   sendChatMessage,
+  subscribeToAdminChatChanges,
   updateChatThreadStatus,
   type AdminChatThread,
+  type ChatRealtimeStatus,
   type ChatThreadStatus,
 } from "../../../data/chat";
 
 const STATUS_LABELS: Record<ChatThreadStatus, string> = {
   open: "Open",
+  waiting_admin: "Waiting Admin",
   waiting_customer: "Waiting Customer",
   resolved: "Resolved",
+};
+
+const STATUS_CLASSNAMES: Record<ChatThreadStatus, string> = {
+  open: "text-brand-300",
+  waiting_admin: "text-amber-300",
+  waiting_customer: "text-sky-300",
+  resolved: "text-emerald-300",
 };
 
 const QUICK_REPLIES = [
@@ -57,6 +67,7 @@ export default function AdminChatPage() {
   const [draft, setDraft] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [realtimeStatus, setRealtimeStatus] = useState<ChatRealtimeStatus>("closed");
   const [error, setError] = useState<string | null>(null);
 
   const selectedThread = threads.find((thread) => thread.id === selectedId) ?? threads[0] ?? null;
@@ -83,8 +94,8 @@ export default function AdminChatPage() {
     });
   }, [searchQuery, statusFilter, threadTypeFilter, threads]);
 
-  const loadThreads = async () => {
-    setIsLoading(true);
+  const loadThreads = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) setIsLoading(true);
     setError(null);
 
     try {
@@ -94,33 +105,56 @@ export default function AdminChatPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load chat.");
     } finally {
-      setIsLoading(false);
+      if (!options?.silent) setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       void loadThreads();
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [loadThreads]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAdminChatChanges(
+      () => void loadThreads({ silent: true }),
+      setRealtimeStatus
+    );
+
+    return () => unsubscribe();
+  }, [loadThreads]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      void fetchAdminChatThreads()
-        .then((data) => {
-          setThreads(data);
-          setSelectedId((current) => current ?? data[0]?.id ?? null);
-        })
-        .catch((err: Error) => setError(err.message));
-    }, 10000);
+      void loadThreads({ silent: true });
+    }, 45000);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [loadThreads]);
 
   useEffect(() => {
     if (!selectedThreadId) return;
     void markThreadMessagesRead(selectedThreadId, "staff");
+    const timer = window.setTimeout(() => {
+      const readAt = new Date().toISOString();
+      setThreads((current) =>
+        current.map((thread) =>
+          thread.id === selectedThreadId
+            ? {
+                ...thread,
+                chat_messages: thread.chat_messages.map((message) =>
+                  message.sender_role === "customer" && !message.read_at
+                    ? { ...message, read_at: readAt }
+                    : message
+                ),
+              }
+            : thread
+        )
+      );
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [selectedThreadId]);
 
   const handleSend = async () => {
@@ -175,8 +209,14 @@ export default function AdminChatPage() {
     }
   };
 
+  const waitingAdminCount = threads.filter((thread) => thread.status === "waiting_admin").length;
+  const waitingCustomerCount = threads.filter(
+    (thread) => thread.status === "waiting_customer"
+  ).length;
   const openCount = threads.filter((thread) => thread.status === "open").length;
+  const resolvedCount = threads.filter((thread) => thread.status === "resolved").length;
   const orderThreadCount = threads.filter((thread) => thread.order_id).length;
+  const generalThreadCount = threads.length - orderThreadCount;
   const unreadCount = threads.reduce(
     (sum, thread) =>
       sum +
@@ -200,6 +240,9 @@ export default function AdminChatPage() {
             <p className="mt-1 text-sm text-slate-400">
               Reply to customer questions, review order context, and resolve conversations.
             </p>
+            <p className="mt-2 text-xs font-bold uppercase tracking-[0.22em] text-slate-600">
+              {realtimeStatus === "subscribed" ? "Live updates on" : "Polling backup active"}
+            </p>
           </div>
           <button
             type="button"
@@ -220,8 +263,8 @@ export default function AdminChatPage() {
               <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Total</p>
             </div>
             <div className="border-x border-slate-800 p-4">
-              <p className="text-xl font-black text-amber-300">{openCount}</p>
-              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Open</p>
+              <p className="text-xl font-black text-amber-300">{waitingAdminCount}</p>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Needs Reply</p>
             </div>
             <div className="p-4">
               <p className="text-xl font-black text-brand-300">{unreadCount}</p>
@@ -248,6 +291,7 @@ export default function AdminChatPage() {
             >
               <option value="all">All statuses</option>
               <option value="open">Open</option>
+              <option value="waiting_admin">Waiting Admin</option>
               <option value="waiting_customer">Waiting Customer</option>
               <option value="resolved">Resolved</option>
             </select>
@@ -321,7 +365,9 @@ export default function AdminChatPage() {
                       {lastMessage?.body ?? "No messages yet"}
                     </p>
                     <div className="mt-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-wide">
-                      <span className="text-brand-300">{STATUS_LABELS[thread.status]}</span>
+                      <span className={STATUS_CLASSNAMES[thread.status]}>
+                        {STATUS_LABELS[thread.status]}
+                      </span>
                       <span className="text-slate-500">
                         {thread.order_id ? `Order #${thread.order_id.slice(0, 8)}` : "General"}
                       </span>
@@ -358,6 +404,7 @@ export default function AdminChatPage() {
                     className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-slate-200 outline-none"
                   >
                     <option value="open">Open</option>
+                    <option value="waiting_admin">Waiting Admin</option>
                     <option value="waiting_customer">Waiting Customer</option>
                     <option value="resolved">Resolved</option>
                   </select>
@@ -478,10 +525,28 @@ export default function AdminChatPage() {
                     )}
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-                    <p className="text-xs text-slate-500">Inbox Mix</p>
-                    <div className="mt-3 flex items-center gap-3 text-sm text-slate-300">
+                    <p className="text-xs text-slate-500">Inbox Overview</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {[
+                        { label: "Needs reply", value: waitingAdminCount, tone: "text-amber-300" },
+                        { label: "Unread", value: unreadCount, tone: "text-red-300" },
+                        { label: "Waiting customer", value: waitingCustomerCount, tone: "text-sky-300" },
+                        { label: "Open", value: openCount, tone: "text-brand-300" },
+                        { label: "Order chats", value: orderThreadCount, tone: "text-violet-300" },
+                        { label: "General", value: generalThreadCount, tone: "text-slate-300" },
+                        { label: "Resolved", value: resolvedCount, tone: "text-emerald-300" },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-lg bg-slate-950 px-3 py-2">
+                          <p className={`text-lg font-black ${item.tone}`}>{item.value}</p>
+                          <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                            {item.label}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-xs text-slate-400">
                       <ClipboardList className="h-4 w-4 text-brand-400" />
-                      <span>{orderThreadCount} order-linked chats</span>
+                      <span>Customer messages move threads to Waiting Admin automatically.</span>
                     </div>
                   </div>
                   <button

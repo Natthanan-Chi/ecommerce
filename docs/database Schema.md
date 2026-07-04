@@ -26,13 +26,13 @@ This normalized relational model ensures strict data consistency, ACID transacti
 
 ### **Table: users**
 
-Stores customer credentials delegated to third-party OAuth identity providers (e.g., Google, Apple, GitHub), profiles, system roles, and privileges.
+Stores customer credentials delegated to Supabase Auth providers (email/password or OAuth providers such as GitHub), profiles, system roles, and privileges.
 
 | Field Name | Data Type | Constraints | Description |
 | :---- | :---- | :---- | :---- |
 | id | UUID / BIGINT | PRIMARY KEY, DEFAULT gen\_random\_uuid() | Unique user identifier in the local system |
 | email | VARCHAR(255) | UNIQUE, NOT NULL | User email retrieved from the OAuth provider |
-| oauth\_provider | VARCHAR(50) | NOT NULL | Identity provider name (e.g., google, apple, github) |
+| oauth\_provider | VARCHAR(50) | NOT NULL | Identity provider name (e.g., email, google, apple, github) |
 | oauth\_id | VARCHAR(255) | NOT NULL | Unique user identifier returned by the provider |
 | role | VARCHAR(30) | NOT NULL, DEFAULT 'customer', CHECK (role IN ('customer', 'admin', 'staff', 'support')) | User authorization role for access control (RBAC) |
 | first\_name | VARCHAR(100) | NOT NULL | User's first name, synced from OAuth profile |
@@ -42,7 +42,7 @@ Stores customer credentials delegated to third-party OAuth identity providers (e
 | created\_at | TIMESTAMP | DEFAULT CURRENT\_TIMESTAMP | Account creation date |
 | updated\_at | TIMESTAMP | DEFAULT CURRENT\_TIMESTAMP | Last updated profile timestamp |
 
-*Note: A composite unique constraint should be placed on (oauth\_provider, oauth\_id) to prevent duplicate social accounts mapping to different internal IDs.*
+*Note: A composite unique constraint should be placed on (oauth\_provider, oauth\_id) to prevent duplicate auth identities mapping to different internal IDs.*
 
 ### **Table: categories**
 
@@ -141,7 +141,7 @@ Stores customer support conversations. A thread can be general support or linked
 | id | UUID | PRIMARY KEY, DEFAULT gen\_random\_uuid() | Chat thread ID |
 | user\_id | UUID | FOREIGN KEY REFERENCES users(id) ON DELETE CASCADE | Customer who owns the conversation |
 | order\_id | UUID | NULL, FOREIGN KEY REFERENCES orders(id) ON DELETE SET NULL | Optional linked order |
-| status | VARCHAR(20) | DEFAULT 'open', CHECK (status IN ('open', 'waiting\_customer', 'resolved')) | Support workflow state |
+| status | VARCHAR(20) | DEFAULT 'open', CHECK (status IN ('open', 'waiting\_admin', 'waiting\_customer', 'resolved')) | Support workflow state |
 | last\_message\_at | TIMESTAMP | DEFAULT CURRENT\_TIMESTAMP | Last activity timestamp for sorting |
 | created\_at | TIMESTAMP | DEFAULT CURRENT\_TIMESTAMP | Conversation creation timestamp |
 | updated\_at | TIMESTAMP | DEFAULT CURRENT\_TIMESTAMP | Last thread update timestamp |
@@ -162,10 +162,12 @@ Stores the full message history for customer/admin live chat.
 
 Live chat behavior:
 
-* Customer messages set the thread status back to `open`.
+* Customer messages set the thread status to `waiting_admin`.
 * Admin/staff/support replies set the thread status to `waiting_customer`.
-* `resolved` is a manual admin workflow state.
+* `open` and `resolved` are manual admin workflow states.
+* Admin inbox summaries show needs-reply, unread, order-linked, general, waiting-customer, and resolved counts.
 * Unread counts are derived from messages whose `read_at` is NULL and whose sender role is the opposite side of the viewer.
+* The app can subscribe to Supabase Realtime for `chat_threads` and `chat_messages`; when Realtime is not enabled, it keeps a polling fallback.
 
 ## **3\. High-Performance SQL Indexes**
 

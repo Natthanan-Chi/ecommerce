@@ -115,7 +115,7 @@ CREATE TABLE public.chat_threads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     order_id UUID REFERENCES public.orders(id) ON DELETE SET NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'waiting_customer', 'resolved')),
+    status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'waiting_admin', 'waiting_customer', 'resolved')),
     last_message_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -169,7 +169,7 @@ CREATE TRIGGER set_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW
 -- 4. SUPABASE AUTH INTEGRATION AUTOMATION
 -- =========================================================================
 
--- Trigger function to automatically insert new Supabase Auth sign-ups (OAuth ONLY)
+-- Trigger function to automatically insert new Supabase Auth sign-ups (email/password or OAuth)
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -215,7 +215,7 @@ BEGIN
         new.email,
         provider,
         prov_id,
-        'customer', -- Default role for newly registered OAuth users
+        'customer', -- Default role for newly registered users
         f_name,
         l_name,
         u_avatar,

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import {
   Loader2,
@@ -21,7 +22,8 @@ import {
 const OPEN_CHAT_EVENT = "zenith:open-chat";
 
 export default function AccountPage() {
-  const { isLoading, user, displayName, avatarUrl, signInWithGitHub, signOut } = useAuth();
+  const router = useRouter();
+  const { isLoading, user, displayName, avatarUrl, signOut } = useAuth();
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [reviews, setReviews] = useState<AccountReview[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -86,12 +88,12 @@ export default function AccountPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
             View your orders, reviews, and saved checkout details.
           </p>
-          <button
-            onClick={() => void signInWithGitHub()}
-            className="w-full rounded-xl bg-slate-950 dark:bg-white px-4 py-3 text-sm font-bold text-white dark:text-slate-950"
+          <Link
+            href="/login"
+            className="block w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white dark:bg-white dark:text-slate-950"
           >
-            Sign in with GitHub
-          </button>
+            Sign in or create account
+          </Link>
         </div>
       </main>
     );
@@ -105,7 +107,9 @@ export default function AccountPage() {
             Back to Store
           </Link>
           <button
-            onClick={() => void signOut()}
+            onClick={() => {
+              void signOut().then(() => router.push("/login"));
+            }}
             className="rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2 text-sm font-bold text-slate-600 dark:text-slate-300"
           >
             Sign out

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   AlertCircle,
   ArrowLeft,
@@ -18,7 +18,9 @@ import {
   getOrCreateCustomerThread,
   markThreadMessagesRead,
   sendChatMessage,
+  subscribeToCustomerThread,
   updateChatThreadStatus,
+  type ChatRealtimeStatus,
   type ChatMessage,
   type ChatThread,
 } from "../data/chat";
@@ -48,7 +50,8 @@ function formatTime(value: string) {
 
 export default function CustomerChatWidget() {
   const pathname = usePathname();
-  const { isLoading, user, signInWithGitHub } = useAuth();
+  const router = useRouter();
+  const { isLoading, user } = useAuth();
   const userId = user?.id ?? null;
   const [isOpen, setIsOpen] = useState(false);
   const [thread, setThread] = useState<ChatThread | null>(null);
@@ -57,6 +60,7 @@ export default function CustomerChatWidget() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [unreadBadgeCount, setUnreadBadgeCount] = useState(0);
+  const [realtimeStatus, setRealtimeStatus] = useState<ChatRealtimeStatus>("closed");
   const [isBooting, setIsBooting] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -180,6 +184,37 @@ export default function CustomerChatWidget() {
   useEffect(() => {
     if (!isOpen || !thread || !userId) return;
 
+    let cancelled = false;
+    const reloadMessages = () => {
+      void fetchChatMessages(thread.id)
+        .then((nextMessages) => {
+          if (cancelled) return;
+          setMessages(nextMessages);
+          void markThreadMessagesRead(thread.id, "customer");
+          void fetchCustomerUnreadChatCount(userId).then((count) => {
+            if (!cancelled) setUnreadBadgeCount(count);
+          });
+        })
+        .catch((err: Error) => {
+          if (!cancelled) setError(err.message);
+        });
+    };
+
+    const unsubscribe = subscribeToCustomerThread(
+      thread.id,
+      reloadMessages,
+      setRealtimeStatus
+    );
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [isOpen, thread, userId]);
+
+  useEffect(() => {
+    if (!isOpen || !thread || !userId) return;
+
     const interval = window.setInterval(() => {
       void fetchChatMessages(thread.id)
         .then((nextMessages) => {
@@ -188,7 +223,7 @@ export default function CustomerChatWidget() {
           void fetchCustomerUnreadChatCount(userId).then(setUnreadBadgeCount);
         })
         .catch((err: Error) => setError(err.message));
-    }, 8000);
+    }, 30000);
 
     return () => window.clearInterval(interval);
   }, [isOpen, thread, userId]);
@@ -208,7 +243,7 @@ export default function CustomerChatWidget() {
         senderRole: "customer",
         body: draft,
       });
-      await updateChatThreadStatus(thread.id, "open");
+      await updateChatThreadStatus(thread.id, "waiting_admin", "open");
       setMessages((current) => [...current, sent]);
       setDraft("");
     } catch (err) {
@@ -230,6 +265,9 @@ export default function CustomerChatWidget() {
             <div className="min-w-0">
               <p className="truncate text-sm font-extrabold">{threadTitle}</p>
               <p className="text-[11px] text-slate-400">Ask about products or orders</p>
+              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                {realtimeStatus === "subscribed" ? "Live updates on" : "Polling backup"}
+              </p>
             </div>
             <div className="flex items-center gap-1">
               {activeOrderId && (
@@ -264,10 +302,13 @@ export default function CustomerChatWidget() {
               </p>
               <button
                 type="button"
-                onClick={() => void signInWithGitHub()}
+                onClick={() => {
+                  setIsOpen(false);
+                  router.push("/login");
+                }}
                 className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-500"
               >
-                Sign in with GitHub
+                Sign in or create account
               </button>
             </div>
           ) : (

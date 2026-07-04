@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
   Loader2,
   LockKeyhole,
+  Mail,
   ShieldCheck,
   UserCircle,
 } from "lucide-react";
@@ -29,10 +31,14 @@ export default function AdminLoginPage() {
     user,
     displayName,
     signInWithGitHub,
+    signInWithEmailPassword,
     signOut,
   } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isCheckingRole, setIsCheckingRole] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmittingEmail, setIsSubmittingEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -68,6 +74,21 @@ export default function AdminLoginPage() {
       await signInWithGitHub({ next: "/admin" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start admin sign in.");
+    }
+  };
+
+  const handleEmailAdminSignIn = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsSubmittingEmail(true);
+    setError(null);
+
+    try {
+      await signInWithEmailPassword(email, password);
+      setPassword("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to sign in with email.");
+    } finally {
+      setIsSubmittingEmail(false);
     }
   };
 
@@ -166,14 +187,66 @@ export default function AdminLoginPage() {
                 </button>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={handleAdminSignIn}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-200 active:scale-[0.99]"
-              >
-                <UserCircle className="h-5 w-5" />
-                Continue with GitHub
-              </button>
+              <div className="space-y-5">
+                <form onSubmit={handleEmailAdminSignIn} className="space-y-3">
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Admin Email
+                    </span>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      required
+                      autoComplete="email"
+                      placeholder="admin@example.com"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm font-semibold text-white outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
+                      Password
+                    </span>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      required
+                      minLength={6}
+                      autoComplete="current-password"
+                      placeholder="Enter password"
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm font-semibold text-white outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingEmail}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSubmittingEmail ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Mail className="h-4 w-4" />
+                    )}
+                    Sign in with Email
+                  </button>
+                </form>
+
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-slate-800" />
+                  <span className="text-xs font-bold uppercase tracking-wide text-slate-600">or</span>
+                  <div className="h-px flex-1 bg-slate-800" />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAdminSignIn}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-slate-200 active:scale-[0.99]"
+                >
+                  <UserCircle className="h-5 w-5" />
+                  Continue with GitHub
+                </button>
+              </div>
             )}
 
             {error && (
