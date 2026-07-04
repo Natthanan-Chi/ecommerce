@@ -2,13 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, MessageSquareText, PackageCheck, Plus } from "lucide-react";
+import {
+  LayoutGrid,
+  MessageCircle,
+  MessageSquareText,
+  PackageCheck,
+  Plus,
+} from "lucide-react";
 
 const NAV_ITEMS = [
   { label: "All Products", href: "/admin/products", icon: LayoutGrid, exact: true },
   { label: "Add New Product", href: "/admin/products/new", icon: Plus, exact: false },
   { label: "Orders", href: "/admin/orders", icon: PackageCheck, exact: false },
   { label: "Reviews", href: "/admin/reviews", icon: MessageSquareText, exact: false },
+  { label: "Live Chat", href: "/admin/chat", icon: MessageCircle, exact: false },
 ];
 
 export default function AdminNav() {

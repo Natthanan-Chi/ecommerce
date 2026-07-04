@@ -132,6 +132,41 @@ Saves the specific quantity and transactional price of ordered products. **Impor
 | quantity | INT | NOT NULL, CHECK (quantity \> 0\) | Bought volume |
 | unit\_price | DECIMAL(10,2) | NOT NULL | Transactional price point snapshot |
 
+### **Table: chat\_threads**
+
+Stores customer support conversations. A thread can be general support or linked to a specific order. Customer account pages open order-linked threads through `order_id`, while the storefront chat widget can return to the general support thread by using a NULL `order_id`.
+
+| Field Name | Data Type | Constraints | Description |
+| :---- | :---- | :---- | :---- |
+| id | UUID | PRIMARY KEY, DEFAULT gen\_random\_uuid() | Chat thread ID |
+| user\_id | UUID | FOREIGN KEY REFERENCES users(id) ON DELETE CASCADE | Customer who owns the conversation |
+| order\_id | UUID | NULL, FOREIGN KEY REFERENCES orders(id) ON DELETE SET NULL | Optional linked order |
+| status | VARCHAR(20) | DEFAULT 'open', CHECK (status IN ('open', 'waiting\_customer', 'resolved')) | Support workflow state |
+| last\_message\_at | TIMESTAMP | DEFAULT CURRENT\_TIMESTAMP | Last activity timestamp for sorting |
+| created\_at | TIMESTAMP | DEFAULT CURRENT\_TIMESTAMP | Conversation creation timestamp |
+| updated\_at | TIMESTAMP | DEFAULT CURRENT\_TIMESTAMP | Last thread update timestamp |
+
+### **Table: chat\_messages**
+
+Stores the full message history for customer/admin live chat.
+
+| Field Name | Data Type | Constraints | Description |
+| :---- | :---- | :---- | :---- |
+| id | BIGINT | PRIMARY KEY, AUTO\_INCREMENT | Message ID |
+| thread\_id | UUID | FOREIGN KEY REFERENCES chat\_threads(id) ON DELETE CASCADE | Parent conversation |
+| sender\_id | UUID | FOREIGN KEY REFERENCES users(id) ON DELETE CASCADE | Actual account that sent the message |
+| sender\_role | VARCHAR(20) | CHECK (sender\_role IN ('customer', 'admin', 'staff', 'support')) | Role snapshot used for display and audit |
+| body | TEXT | NOT NULL | Message text |
+| read\_at | TIMESTAMP | NULL | Read receipt timestamp |
+| created\_at | TIMESTAMP | DEFAULT CURRENT\_TIMESTAMP | Message creation timestamp |
+
+Live chat behavior:
+
+* Customer messages set the thread status back to `open`.
+* Admin/staff/support replies set the thread status to `waiting_customer`.
+* `resolved` is a manual admin workflow state.
+* Unread counts are derived from messages whose `read_at` is NULL and whose sender role is the opposite side of the viewer.
+
 ## **3\. High-Performance SQL Indexes**
 
 To prevent slow response times on high-traffic sites, apply these indices to optimize queries:
@@ -153,6 +188,12 @@ CREATE INDEX idx\_users\_oauth ON users(oauth\_provider, oauth\_id);
 
 \-- Speed up back-office and administration lookups by role  
 CREATE INDEX idx\_users\_role ON users(role);
+
+\-- Fast support inbox sorting  
+CREATE INDEX idx\_chat\_threads\_last\_message\_at ON chat\_threads(last\_message\_at DESC);
+
+\-- Fast message history loading per conversation  
+CREATE INDEX idx\_chat\_messages\_thread\_created ON chat\_messages(thread\_id, created\_at ASC);
 
 ## **4\. NoSQL Document Database Design (MongoDB / Firestore)**
 

@@ -11,7 +11,7 @@ interface AdminGuardProps {
 }
 
 export default function AdminGuard({ children }: AdminGuardProps) {
-  const { isLoading: isAuthLoading, user, signInWithGitHub } = useAuth();
+  const { isLoading: isAuthLoading, user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +52,8 @@ export default function AdminGuard({ children }: AdminGuardProps) {
   }, [isAuthLoading, user]);
 
   const isLoading = isAuthLoading || isLoadingProfile;
-  const isAllowed = profile?.role === "admin" || profile?.role === "staff";
+  const isAllowed =
+    profile?.role === "admin" || profile?.role === "staff" || profile?.role === "support";
 
   if (isLoading) {
     return (
@@ -74,13 +75,12 @@ export default function AdminGuard({ children }: AdminGuardProps) {
           <p className="text-sm text-slate-400 mb-5">
             Please sign in before managing products.
           </p>
-          <button
-            type="button"
-            onClick={() => void signInWithGitHub()}
-            className="w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-bold text-white hover:bg-brand-500 transition"
+          <Link
+            href="/admin/login"
+            className="inline-flex w-full items-center justify-center rounded-lg bg-brand-600 px-4 py-3 text-sm font-bold text-white hover:bg-brand-500 transition"
           >
-            Sign in with GitHub
-          </button>
+            Continue to Admin Login
+          </Link>
         </div>
       </div>
     );
@@ -93,7 +93,7 @@ export default function AdminGuard({ children }: AdminGuardProps) {
           <AlertCircle className="w-10 h-10 mx-auto mb-4 text-amber-400" />
           <h1 className="text-xl font-extrabold text-white mb-2">No Admin Access</h1>
           <p className="text-sm text-slate-400 mb-2">
-            Your account is signed in, but it is not marked as admin or staff.
+            Your account is signed in, but it is not marked as admin, staff, or support.
           </p>
           {error && <p className="text-xs text-red-300 mb-4">{error}</p>}
           <Link

@@ -17,7 +17,7 @@ interface AuthContextValue {
   user: User | null;
   displayName: string;
   avatarUrl: string | null;
-  signInWithGitHub: () => Promise<void>;
+  signInWithGitHub: (options?: { next?: string }) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -71,8 +71,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signInWithGitHub = useCallback(async () => {
-    const redirectTo = `${window.location.origin}/auth/callback`;
+  const signInWithGitHub = useCallback(async (options?: { next?: string }) => {
+    const next = options?.next;
+    const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
+    const redirectTo = safeNext
+      ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`
+      : `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {

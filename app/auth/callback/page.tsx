@@ -9,6 +9,7 @@ import { supabase } from "../../../lib/supabase";
 export default function AuthCallbackPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [retryHref, setRetryHref] = useState("/login");
 
   useEffect(() => {
     let mounted = true;
@@ -16,6 +17,14 @@ export default function AuthCallbackPage() {
     async function completeSignIn() {
       const url = new URL(window.location.href);
       const code = url.searchParams.get("code");
+      const nextParam = url.searchParams.get("next");
+      const nextPath =
+        nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
+          ? nextParam
+          : "/";
+      if (mounted) {
+        setRetryHref(nextPath.startsWith("/admin") ? "/admin/login" : "/login");
+      }
       const oauthError = url.searchParams.get("error_description");
       const hashError = new URLSearchParams(url.hash.replace(/^#/, "")).get(
         "error_description"
@@ -31,7 +40,7 @@ export default function AuthCallbackPage() {
       } = await supabase.auth.getSession();
 
       if (existingSession) {
-        router.replace("/");
+        router.replace(nextPath);
         return;
       }
 
@@ -42,7 +51,7 @@ export default function AuthCallbackPage() {
           return;
         }
 
-        router.replace("/");
+        router.replace(nextPath);
         return;
       }
 
@@ -54,7 +63,7 @@ export default function AuthCallbackPage() {
         if (!mounted) return;
 
         if (session) {
-          router.replace("/");
+          router.replace(nextPath);
         } else {
           setError("Could not find a completed Supabase sign-in session.");
         }
@@ -85,7 +94,7 @@ export default function AuthCallbackPage() {
             <h1 className="text-lg font-extrabold mb-2">Sign In Failed</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">{error}</p>
             <Link
-              href="/login"
+              href={retryHref}
               className="inline-flex justify-center w-full rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold py-3 transition"
             >
               Try Again

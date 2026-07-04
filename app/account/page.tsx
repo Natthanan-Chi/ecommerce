@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import { Loader2, MapPin, PackageCheck, Star, UserCircle } from "lucide-react";
+import {
+  Loader2,
+  MapPin,
+  MessageCircle,
+  PackageCheck,
+  Star,
+  UserCircle,
+} from "lucide-react";
 import { useAuth } from "../../components/AuthProvider";
 import {
   fetchMyOrders,
@@ -10,6 +17,8 @@ import {
   type AccountReview,
   type CustomerOrder,
 } from "../../data/products";
+
+const OPEN_CHAT_EVENT = "zenith:open-chat";
 
 export default function AccountPage() {
   const { isLoading, user, displayName, avatarUrl, signInWithGitHub, signOut } = useAuth();
@@ -46,6 +55,17 @@ export default function AccountPage() {
       clearTimeout(timer);
     };
   }, [isLoading, user]);
+
+  const handleAskAboutOrder = (order: CustomerOrder) => {
+    window.dispatchEvent(
+      new CustomEvent(OPEN_CHAT_EVENT, {
+        detail: {
+          orderId: order.id,
+          orderLabel: order.id.slice(0, 8).toUpperCase(),
+        },
+      })
+    );
+  };
 
   if (isLoading) {
     return (
@@ -145,6 +165,14 @@ export default function AccountPage() {
                         </p>
                       </div>
                       <p className="mt-3 text-sm text-slate-500 truncate">{order.address}</p>
+                      <button
+                        type="button"
+                        onClick={() => handleAskAboutOrder(order)}
+                        className="mt-4 inline-flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2 text-xs font-extrabold text-brand-700 transition hover:border-brand-400 hover:bg-brand-100 dark:border-brand-900/60 dark:bg-brand-950/40 dark:text-brand-300"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Ask about this order
+                      </button>
                     </div>
                   ))}
                 </div>

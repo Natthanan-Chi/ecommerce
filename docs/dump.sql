@@ -110,6 +110,29 @@ CREATE TABLE public.order_items (
     unit_price DECIMAL(10, 2) NOT NULL CHECK (unit_price >= 0)
 );
 
+-- TABLE: chat_threads (Customer support conversations)
+CREATE TABLE public.chat_threads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    order_id UUID REFERENCES public.orders(id) ON DELETE SET NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'waiting_customer', 'resolved')),
+    last_message_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, order_id)
+);
+
+-- TABLE: chat_messages (Live chat message history)
+CREATE TABLE public.chat_messages (
+    id BIGSERIAL PRIMARY KEY,
+    thread_id UUID NOT NULL REFERENCES public.chat_threads(id) ON DELETE CASCADE,
+    sender_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    sender_role VARCHAR(20) NOT NULL CHECK (sender_role IN ('customer', 'admin', 'staff', 'support')),
+    body TEXT NOT NULL CHECK (char_length(trim(body)) > 0),
+    read_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- =========================================================================
 -- 2. HIGH PERFORMANCE INDEXES
 -- =========================================================================
@@ -120,6 +143,9 @@ CREATE INDEX idx_orders_user_created ON public.orders(user_id, created_at DESC);
 CREATE INDEX idx_reviews_product ON public.reviews(product_id);
 CREATE INDEX idx_users_oauth ON public.users(oauth_provider, oauth_id);
 CREATE INDEX idx_users_role ON public.users(role);
+CREATE INDEX idx_chat_threads_user_id ON public.chat_threads(user_id);
+CREATE INDEX idx_chat_threads_last_message_at ON public.chat_threads(last_message_at DESC);
+CREATE INDEX idx_chat_messages_thread_created ON public.chat_messages(thread_id, created_at ASC);
 
 -- =========================================================================
 -- 3. UPDATED_AT TRIGGER FUNCTION
