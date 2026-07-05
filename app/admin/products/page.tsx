@@ -188,6 +188,33 @@ export default function ProductsPage() {
     p.product_images[0]?.image_url ??
     null;
 
+  const filterButtonClass = (status: "all" | "active" | "inactive") => {
+    const base =
+      "px-4 py-2.5 rounded-xl text-xs font-bold capitalize transition cursor-pointer";
+
+    if (statusFilter === status) {
+      if (status === "active") {
+        return `${base} bg-emerald-600 text-white shadow shadow-emerald-900/20 dark:bg-emerald-500 dark:text-slate-950`;
+      }
+
+      if (status === "inactive") {
+        return `${base} bg-red-600 text-white shadow shadow-red-900/20`;
+      }
+
+      return `${base} bg-brand-600 text-white shadow shadow-brand-900/30`;
+    }
+
+    if (status === "active") {
+      return `${base} border border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-emerald-800 dark:hover:text-emerald-300`;
+    }
+
+    if (status === "inactive") {
+      return `${base} border border-red-200 bg-red-50 text-red-700 hover:border-red-300 hover:bg-red-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-red-900 dark:hover:text-red-300`;
+    }
+
+    return `${base} border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:text-white`;
+  };
+
   return (
     <div className="p-8 max-w-screen-xl">
       {/* ── Header ── */}
@@ -233,11 +260,7 @@ export default function ProductsPage() {
               key={s}
               id={`filter-${s}`}
               onClick={() => setStatusFilter(s)}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold capitalize transition cursor-pointer ${
-                statusFilter === s
-                  ? "bg-brand-600 text-white shadow shadow-brand-900/30"
-                  : "bg-slate-900 border border-slate-800 text-slate-400 hover:border-slate-700 hover:text-white"
-              }`}
+              className={filterButtonClass(s)}
             >
               {s}
             </button>
@@ -377,13 +400,13 @@ export default function ProductsPage() {
                       <span
                         className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${
                           product.is_active
-                            ? "bg-green-950/50 text-green-400 border-green-900"
-                            : "bg-red-950/50 text-red-400 border-red-900"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-green-900 dark:bg-green-950/50 dark:text-green-400"
+                            : "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-400"
                         }`}
                       >
                         <span
                           className={`w-1.5 h-1.5 rounded-full ${
-                            product.is_active ? "bg-green-400" : "bg-red-400"
+                            product.is_active ? "bg-emerald-500 dark:bg-green-400" : "bg-red-500 dark:bg-red-400"
                           }`}
                         />
                         {product.is_active ? "Active" : "Inactive"}

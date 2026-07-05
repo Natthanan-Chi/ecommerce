@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ArrowLeft, Package } from "lucide-react";
 import AdminGuard from "./AdminGuard";
 import AdminNav from "./AdminNav";
+import AdminUserControls from "./AdminUserControls";
 
 export default function AdminLayoutShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -15,12 +16,12 @@ export default function AdminLayoutShell({ children }: { children: ReactNode }) 
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
-      <aside className="w-64 shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col sticky top-0 h-screen overflow-y-auto">
-        <div className="px-5 pt-6 pb-5 border-b border-slate-800">
+    <div className="admin-theme flex min-h-screen bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-100">
+      <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+        <div className="border-b border-slate-200 px-5 pb-5 pt-6 dark:border-slate-800">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors text-xs mb-5"
+            className="mb-5 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800 dark:hover:text-slate-300"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to Store
@@ -30,8 +31,8 @@ export default function AdminLayoutShell({ children }: { children: ReactNode }) 
               <Package className="w-5 h-5 text-white" />
             </div>
             <div>
-              <p className="text-sm font-extrabold text-white leading-tight tracking-tight">
-                Admin Panel
+              <p className="text-sm font-extrabold leading-tight tracking-tight text-slate-950 dark:text-white">
+                Zenith Admin
               </p>
               <p className="text-[10px] text-slate-500 leading-tight">Zenith Store</p>
             </div>
@@ -40,8 +41,8 @@ export default function AdminLayoutShell({ children }: { children: ReactNode }) 
 
         <AdminNav />
 
-        <div className="px-5 py-3 border-t border-slate-800 mt-auto">
-          <p className="text-[10px] text-slate-700 select-none">Zenith Admin v1.0</p>
+        <div className="mt-auto">
+          <AdminUserControls />
         </div>
       </aside>
 
