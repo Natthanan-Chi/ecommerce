@@ -14,6 +14,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { useAuth } from "../../../components/AuthProvider";
+import { AdminSkeletonBlock } from "../../../components/admin/AdminLoadingAndErrorStates";
 import { fetchCurrentUserProfile, type UserProfile } from "../../../data/products";
 
 function isAdminRole(profile: UserProfile | null) {
@@ -145,9 +146,18 @@ export default function AdminLoginPage() {
 
           <div className="p-6">
             {isLoading ? (
-              <div className="flex items-center justify-center gap-2 py-10 text-slate-400">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span className="text-sm font-medium">Checking admin access...</span>
+              <div aria-busy="true" aria-live="polite" className="space-y-4 py-2">
+                <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+                  <div className="flex items-center gap-3">
+                    <AdminSkeletonBlock className="h-10 w-10" />
+                    <div className="flex-1 space-y-2">
+                      <AdminSkeletonBlock className="h-4 w-40" />
+                      <AdminSkeletonBlock className="h-3 w-56 max-w-full" />
+                    </div>
+                  </div>
+                </div>
+                <AdminSkeletonBlock className="h-11 w-full" />
+                <AdminSkeletonBlock className="h-11 w-full" />
               </div>
             ) : isBlocked ? (
               <div className="space-y-4">

@@ -8,6 +8,11 @@ import {
   type AdminOrder,
   type OrderStatus,
 } from "../../../data/products";
+import {
+  AdminErrorState,
+  AdminSplitPaneSkeleton,
+  AdminStatGridSkeleton,
+} from "../../../components/admin/AdminLoadingAndErrorStates";
 
 const STATUSES: OrderStatus[] = ["PENDING", "PAID", "SHIPPED", "DELIVERED", "CANCELLED"];
 
@@ -98,32 +103,42 @@ export default function AdminOrdersPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[
-          ["Total Orders", stats.total],
-          ["Pending", stats.pending],
-          ["Shipped", stats.shipped],
-          ["Revenue", `$${stats.revenue.toFixed(2)}`],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <PackageCheck className="w-5 h-5 text-brand-400 mb-3" />
-            <p className="text-2xl font-extrabold text-white">{value}</p>
-            <p className="text-[11px] text-slate-500">{label}</p>
+      <div className="mb-8">
+        {loading ? (
+          <AdminStatGridSkeleton />
+        ) : (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              ["Total Orders", stats.total],
+              ["Pending", stats.pending],
+              ["Shipped", stats.shipped],
+              ["Revenue", `$${stats.revenue.toFixed(2)}`],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                <PackageCheck className="w-5 h-5 text-brand-400 mb-3" />
+                <p className="text-2xl font-extrabold text-white">{value}</p>
+                <p className="text-[11px] text-slate-500">{label}</p>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
 
-      {error && (
+      {error && !loading && orders.length > 0 && (
         <div className="mb-4 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-32 text-slate-500 gap-3">
-          <Loader2 className="w-7 h-7 animate-spin" />
-          <span className="text-sm">Loading orders...</span>
-        </div>
+        <AdminSplitPaneSkeleton />
+      ) : error ? (
+        <AdminErrorState
+          title="Unable to load orders"
+          message="The orders inbox could not be loaded right now."
+          detail={error}
+          onAction={load}
+        />
       ) : orders.length === 0 ? (
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-12 text-center text-slate-500">
           No orders yet.

@@ -23,6 +23,10 @@ import {
   deleteProduct,
   type AdminProduct,
 } from "../../../../data/products";
+import {
+  AdminErrorState,
+  AdminProductDetailSkeleton,
+} from "../../../../components/admin/AdminLoadingAndErrorStates";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -171,6 +175,7 @@ export default function ProductDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -183,11 +188,12 @@ export default function ProductDetailPage() {
   const handleDelete = async () => {
     if (!product) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       await deleteProduct(product.id);
       router.push("/admin/products");
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to deactivate");
+      setDeleteError(e instanceof Error ? e.message : "Failed to deactivate");
       setDeleting(false);
       setShowDelete(false);
     }
@@ -196,9 +202,9 @@ export default function ProductDetailPage() {
   // Loading state
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-40 text-slate-500 gap-3">
-        <Loader2 className="w-7 h-7 animate-spin" />
-        <span className="text-sm">Loading product…</span>
+      <div className="contents [&>span]:sr-only">
+        <AdminProductDetailSkeleton />
+        <span className="sr-only">Loading product</span>
       </div>
     );
   }
@@ -206,13 +212,13 @@ export default function ProductDetailPage() {
   // Error state
   if (error || !product) {
     return (
-      <div className="p-8 text-center space-y-3">
-        <Package className="w-12 h-12 mx-auto text-slate-700" />
-        <p className="text-red-400 font-semibold">Product not found</p>
-        <p className="text-slate-500 text-sm">{error}</p>
-        <Link href="/admin/products" className="text-brand-400 hover:text-brand-300 text-sm underline">
-          Back to Products
-        </Link>
+      <div className="p-8">
+        <AdminErrorState
+          title="Product not found"
+          message="This product could not be loaded or may no longer exist."
+          detail={error}
+          href="/admin/products"
+        />
       </div>
     );
   }
@@ -225,6 +231,11 @@ export default function ProductDetailPage() {
   return (
     <>
       <div className="p-8 max-w-screen-xl">
+        {deleteError && (
+          <div className="mb-4 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+            {deleteError}
+          </div>
+        )}
         {/* ── Header ── */}
         <div className="flex items-start justify-between mb-8 gap-4 flex-wrap">
           <nav className="flex items-center gap-1.5 text-xs text-slate-500" aria-label="Breadcrumb">

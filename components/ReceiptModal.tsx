@@ -7,12 +7,16 @@ import { Product } from "../data/products";
 export interface CompletedOrder {
   id: string;
   date: string;
+  createdAt?: string;
+  status?: "PENDING" | "PAID" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+  trackingNumber?: string | null;
   recipient: string;
   address: string;
   items: { product: Product; qty: number }[];
   subtotal: number;
   discount: number;
   tax: number;
+  shipping: number;
   total: number;
 }
 

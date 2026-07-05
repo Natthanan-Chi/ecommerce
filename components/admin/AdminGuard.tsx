@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { ReactNode, useEffect, useState } from "react";
-import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
+import { AlertCircle, ShieldCheck } from "lucide-react";
 import { useAuth } from "../AuthProvider";
 import { fetchCurrentUserProfile, type UserProfile } from "../../data/products";
+import { AdminStatGridSkeleton, AdminTableSkeleton } from "./AdminLoadingAndErrorStates";
 
 interface AdminGuardProps {
   children: ReactNode;
@@ -57,11 +58,15 @@ export default function AdminGuard({ children }: AdminGuardProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-slate-400">
-        <Loader2 className="w-8 h-8 animate-spin mb-3 text-brand-500" />
-        <p className="text-xs font-semibold uppercase tracking-wide">
-          Verifying admin access
-        </p>
+      <div aria-busy="true" aria-live="polite" className="min-h-screen p-8">
+        <div className="mb-8">
+          <div className="mb-2 h-8 w-52 animate-pulse rounded-xl bg-slate-800/80" />
+          <div className="h-4 w-80 max-w-full animate-pulse rounded-xl bg-slate-800/80" />
+        </div>
+        <div className="mb-8">
+          <AdminStatGridSkeleton />
+        </div>
+        <AdminTableSkeleton rows={5} />
       </div>
     );
   }

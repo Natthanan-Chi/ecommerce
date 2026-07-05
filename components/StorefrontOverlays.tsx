@@ -78,6 +78,8 @@ export default function StorefrontOverlays({ store }: StorefrontOverlaysProps) {
           isLoading={store.isLoadingOrders}
           error={store.ordersError}
           onClose={() => store.setIsHistoryOpen(false)}
+          onAskAboutOrder={store.handleAskAboutOrder}
+          onCopyOrderId={store.handleCopyOrderId}
         />
       )}
 

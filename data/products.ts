@@ -141,22 +141,29 @@ interface SupabaseOrderItem {
 interface SupabaseOrder {
   id: string;
   created_at: string;
+  status: OrderStatus;
   subtotal: number;
   discount: number;
   tax: number;
+  shipping_fee: number;
   grand_total: number;
   shipping_address: string;
+  tracking_number: string | null;
   order_items: SupabaseOrderItem[];
 }
 
 export interface CustomerOrder {
   id: string;
   date: string;
+  createdAt: string;
+  status: OrderStatus;
+  trackingNumber: string | null;
   address: string;
   items: { product: Product; qty: number }[];
   subtotal: number;
   discount: number;
   tax: number;
+  shipping: number;
   total: number;
 }
 
@@ -405,11 +412,14 @@ export async function fetchMyOrders(userId: string): Promise<CustomerOrder[]> {
       `
       id,
       created_at,
+      status,
       subtotal,
       discount,
       tax,
+      shipping_fee,
       grand_total,
       shipping_address,
+      tracking_number,
       order_items (
         quantity,
         unit_price,
@@ -435,11 +445,14 @@ export async function fetchMyOrders(userId: string): Promise<CustomerOrder[]> {
 
   return ((data as unknown[]) as SupabaseOrder[]).map((order) => ({
     id: order.id,
+    createdAt: order.created_at,
     date: new Date(order.created_at).toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
       year: "numeric",
     }),
+    status: order.status,
+    trackingNumber: order.tracking_number,
     address: order.shipping_address,
     items: (order.order_items ?? [])
       .filter((item) => item.products)
@@ -450,6 +463,7 @@ export async function fetchMyOrders(userId: string): Promise<CustomerOrder[]> {
     subtotal: Number(order.subtotal),
     discount: Number(order.discount),
     tax: Number(order.tax),
+    shipping: Number(order.shipping_fee),
     total: Number(order.grand_total),
   }));
 }

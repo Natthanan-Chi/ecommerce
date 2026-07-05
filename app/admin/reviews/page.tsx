@@ -8,6 +8,11 @@ import {
   fetchAdminReviews,
   type AdminReview,
 } from "../../../data/products";
+import {
+  AdminCardsSkeleton,
+  AdminErrorState,
+  AdminStatGridSkeleton,
+} from "../../../components/admin/AdminLoadingAndErrorStates";
 
 function userLabel(review: AdminReview) {
   const fullName = `${review.users?.first_name ?? ""} ${review.users?.last_name ?? ""}`.trim();
@@ -85,31 +90,41 @@ export default function AdminReviewsPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        {[
-          ["Total Reviews", stats.total],
-          ["Average Rating", stats.avg.toFixed(1)],
-          ["Anonymous Public Names", stats.anonymous],
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-            <MessageSquareText className="w-5 h-5 text-brand-400 mb-3" />
-            <p className="text-2xl font-extrabold text-white">{value}</p>
-            <p className="text-[11px] text-slate-500">{label}</p>
+      <div className="mb-8">
+        {loading ? (
+          <AdminStatGridSkeleton count={3} />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              ["Total Reviews", stats.total],
+              ["Average Rating", stats.avg.toFixed(1)],
+              ["Anonymous Public Names", stats.anonymous],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                <MessageSquareText className="w-5 h-5 text-brand-400 mb-3" />
+                <p className="text-2xl font-extrabold text-white">{value}</p>
+                <p className="text-[11px] text-slate-500">{label}</p>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
 
-      {error && (
+      {error && !loading && reviews.length > 0 && (
         <div className="mb-4 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
           {error}
         </div>
       )}
 
       {loading ? (
-        <div className="flex items-center justify-center py-32 text-slate-500 gap-3">
-          <Loader2 className="w-7 h-7 animate-spin" />
-          <span className="text-sm">Loading reviews...</span>
-        </div>
+        <AdminCardsSkeleton count={4} />
+      ) : error ? (
+        <AdminErrorState
+          title="Unable to load reviews"
+          message="The review moderation list could not be loaded right now."
+          detail={error}
+          onAction={load}
+        />
       ) : reviews.length === 0 ? (
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-12 text-center text-slate-500">
           No reviews yet.

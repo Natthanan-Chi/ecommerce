@@ -20,6 +20,10 @@ import {
   deleteProduct,
   type AdminProduct,
 } from "../../../data/products";
+import {
+  AdminErrorState,
+  AdminTableSkeleton,
+} from "../../../components/admin/AdminLoadingAndErrorStates";
 
 // ── Delete confirmation modal ────────────────────────────────────────────────
 
@@ -115,6 +119,7 @@ export default function ProductsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [deleteTarget, setDeleteTarget] = useState<AdminProduct | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -164,6 +169,7 @@ export default function ProductsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       await deleteProduct(deleteTarget.id);
       setProducts((prev) =>
@@ -171,7 +177,7 @@ export default function ProductsPage() {
       );
       setDeleteTarget(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Failed to deactivate");
+      setDeleteError(e instanceof Error ? e.message : "Failed to deactivate");
     } finally {
       setDeleting(false);
     }
@@ -248,21 +254,24 @@ export default function ProductsPage() {
       </div>
 
       {/* ── Table ── */}
+      {deleteError && (
+        <div className="mb-4 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+          {deleteError}
+        </div>
+      )}
+
       {loading ? (
-        <div className="flex items-center justify-center py-32 text-slate-500 gap-3">
-          <Loader2 className="w-7 h-7 animate-spin" />
-          <span className="text-sm">Loading products…</span>
+        <div className="contents [&>span]:sr-only">
+          <AdminTableSkeleton rows={7} />
+          <span className="sr-only">Loading products</span>
         </div>
       ) : error ? (
-        <div className="text-center py-32 space-y-2">
-          <p className="text-red-400 font-semibold">{error}</p>
-          <button
-            onClick={load}
-            className="text-brand-400 hover:text-brand-300 text-sm underline cursor-pointer"
-          >
-            Try again
-          </button>
-        </div>
+        <AdminErrorState
+          title="Unable to load products"
+          message="The product catalog could not be loaded right now."
+          detail={error}
+          onAction={load}
+        />
       ) : filtered.length === 0 ? (
         <div className="text-center py-32 text-slate-500 space-y-2">
           <Package className="w-12 h-12 mx-auto opacity-20" />
@@ -426,7 +435,10 @@ export default function ProductsPage() {
         <DeleteModal
           product={deleteTarget}
           onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
+          onCancel={() => {
+            setDeleteError(null);
+            setDeleteTarget(null);
+          }}
           loading={deleting}
         />
       )}

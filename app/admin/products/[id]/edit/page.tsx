@@ -3,13 +3,17 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ChevronRight, Loader2, Package } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import {
   fetchProductById,
   type AdminProduct,
   type ProductFormData,
 } from "../../../../../data/products";
 import ProductForm from "../../../../../components/admin/ProductForm";
+import {
+  AdminErrorState,
+  AdminFormSkeleton,
+} from "../../../../../components/admin/AdminLoadingAndErrorStates";
 
 export default function EditProductPage() {
   const params = useParams();
@@ -29,22 +33,28 @@ export default function EditProductPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-40 text-slate-500 gap-3">
-        <Loader2 className="w-7 h-7 animate-spin" />
-        <span className="text-sm">Loading product…</span>
+      <div className="contents [&>span]:sr-only">
+        <div className="p-8">
+          <div className="mb-8">
+            <div className="mb-2 h-8 w-48 animate-pulse rounded-xl bg-slate-800/80" />
+            <div className="h-4 w-80 max-w-full animate-pulse rounded-xl bg-slate-800/80" />
+          </div>
+          <AdminFormSkeleton />
+        </div>
+        <span className="sr-only">Loading product</span>
       </div>
     );
   }
 
   if (error || !product) {
     return (
-      <div className="p-8 text-center space-y-3">
-        <Package className="w-12 h-12 mx-auto text-slate-700" />
-        <p className="text-red-400 font-semibold">Product not found</p>
-        <p className="text-slate-500 text-sm">{error}</p>
-        <Link href="/admin/products" className="text-brand-400 hover:text-brand-300 text-sm underline">
-          Back to Products
-        </Link>
+      <div className="p-8">
+        <AdminErrorState
+          title="Product not found"
+          message="This product could not be loaded for editing."
+          detail={error}
+          href="/admin/products"
+        />
       </div>
     );
   }

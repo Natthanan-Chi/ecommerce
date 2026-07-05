@@ -52,10 +52,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
 
     async function hydrateSession() {
-      const { data } = await supabase.auth.getSession();
-      if (!mounted) return;
-      setSession(data.session);
-      setIsLoading(false);
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (!mounted) return;
+        setSession(data.session);
+      } catch (err) {
+        console.warn("[auth] Unable to hydrate saved session:", err);
+        if (mounted) setSession(null);
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
     }
 
     void hydrateSession();

@@ -22,6 +22,10 @@ import {
   type ChatRealtimeStatus,
   type ChatThreadStatus,
 } from "../../../data/chat";
+import {
+  AdminChatSkeleton,
+  AdminErrorState,
+} from "../../../components/admin/AdminLoadingAndErrorStates";
 
 const STATUS_LABELS: Record<ChatThreadStatus, string> = {
   open: "Open",
@@ -255,6 +259,18 @@ export default function AdminChatPage() {
         </div>
       </div>
 
+      {isLoading ? (
+        <AdminChatSkeleton />
+      ) : error && threads.length === 0 ? (
+        <div className="p-6">
+          <AdminErrorState
+            title="Unable to load chat"
+            message="The admin chat inbox could not be loaded right now."
+            detail={error}
+            onAction={() => void loadThreads()}
+          />
+        </div>
+      ) : (
       <div className="grid grid-cols-1 gap-4 p-6 xl:grid-cols-[380px_1fr]">
         <aside className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900">
           <div className="grid grid-cols-3 border-b border-slate-800 text-center">
@@ -320,12 +336,7 @@ export default function AdminChatPage() {
           </div>
 
           <div className="max-h-[calc(100vh-330px)] overflow-y-auto">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-16 text-slate-500">
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Loading chats
-              </div>
-            ) : filteredThreads.length === 0 ? (
+            {filteredThreads.length === 0 ? (
               <div className="px-6 py-16 text-center">
                 <MessageSquareText className="mx-auto mb-3 h-9 w-9 text-slate-600" />
                 <p className="text-sm font-bold text-slate-300">No conversations yet</p>
@@ -569,6 +580,7 @@ export default function AdminChatPage() {
           )}
         </section>
       </div>
+      )}
     </main>
   );
 }

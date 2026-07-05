@@ -13,6 +13,7 @@ import type { CompletedOrder } from "../components/ReceiptModal";
 
 const CART_STORAGE_KEY = "zenith:cart-state";
 const POST_LOGIN_ACTION_KEY = "zenith:post-login-action";
+const OPEN_CHAT_EVENT = "zenith:open-chat";
 
 export type CartItem = { product: Product; qty: number };
 
@@ -327,6 +328,26 @@ export function useStorefront() {
     setIsHistoryOpen(true);
   };
 
+  const handleAskAboutOrder = (order: CompletedOrder) => {
+    window.dispatchEvent(
+      new CustomEvent(OPEN_CHAT_EVENT, {
+        detail: {
+          orderId: order.id.startsWith("#ZN-") ? null : order.id,
+          orderLabel: order.id.startsWith("#") ? order.id.slice(1) : order.id.slice(0, 8).toUpperCase(),
+        },
+      })
+    );
+  };
+
+  const handleCopyOrderId = async (orderId: string) => {
+    try {
+      await navigator.clipboard.writeText(orderId);
+      triggerToast("Order ID copied", "copy");
+    } catch {
+      triggerToast("Unable to copy order ID", "alert-circle");
+    }
+  };
+
   const handleRequireSignInForOrder = () => {
     setIsCheckoutOpen(false);
     triggerToast("Please sign in before confirming your order.", "user-circle");
@@ -355,12 +376,16 @@ export function useStorefront() {
     const newOrder: CompletedOrder = {
       id: receiptId,
       date: receiptDate,
+      createdAt: new Date().toISOString(),
+      status: "PENDING",
+      trackingNumber: null,
       recipient: recipientName,
       address: recipientAddress,
       items: [...cart],
       subtotal,
       discount: discountVal,
       tax: taxVal,
+      shipping: 0,
       total: totalVal,
     };
 
@@ -480,6 +505,8 @@ export function useStorefront() {
     handleApplyPromo,
     handleProceedToCheckout,
     handleHistoryClick,
+    handleAskAboutOrder,
+    handleCopyOrderId,
     handleRequireSignInForOrder,
     handleCheckoutSuccess,
     handleAddReview,
