@@ -20,7 +20,7 @@ export default function AuthCallbackPage() {
       const nextPath =
         nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
           ? nextParam
-          : "/";
+          : "/account";
       if (mounted) {
         setRetryHref(nextPath.startsWith("/admin") ? "/admin/login" : "/login");
       }
@@ -64,7 +64,7 @@ export default function AuthCallbackPage() {
         if (session) {
           router.replace(nextPath);
         } else {
-          setError("Could not find a completed Supabase sign-in session.");
+          setError("ไม่พบเซสชันเข้าสู่ระบบที่สมบูรณ์จาก Supabase");
         }
       }, 500);
 
@@ -87,10 +87,10 @@ export default function AuthCallbackPage() {
       <section className="w-full max-w-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 text-center shadow-xl shadow-slate-200/50 dark:shadow-black/20">
         {error ? (
           <CustomerErrorState
-            title="Sign In Failed"
-            message="We could not complete the Supabase sign-in flow."
+            title="เข้าสู่ระบบไม่สำเร็จ"
+            message="ระบบไม่สามารถดำเนินการเข้าสู่ระบบผ่าน Supabase ให้เสร็จสมบูรณ์ได้"
             detail={error}
-            actionLabel="Try Again"
+            actionLabel="ลองอีกครั้ง"
             href={retryHref}
           />
         ) : (

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { ArrowLeft, Loader2, Mail, ShieldCheck, Sparkles, UserCircle } from "lucide-react";
-import { useAuth } from "../../components/AuthProvider";
+import { type OAuthProvider, useAuth } from "../../components/AuthProvider";
 import { AuthPanelSkeleton } from "../../components/customer/LoadingAndErrorStates";
 
 export default function LoginPage() {
@@ -14,7 +14,7 @@ export default function LoginPage() {
     isLoading,
     user,
     displayName,
-    signInWithGitHub,
+    signInWithOAuth,
     signInWithEmailPassword,
     signUpWithEmailPassword,
     signOut,
@@ -26,11 +26,18 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleGitHubSignIn = async () => {
+  const handleOAuthLogin = async (provider: OAuthProvider) => {
+    setError(null);
+    setMessage(null);
     try {
-      await signInWithGitHub();
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Unable to start GitHub sign in");
+      await signInWithOAuth(provider);
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : err);
+      setError(
+        provider === "google"
+          ? "ไม่สามารถเริ่มเข้าสู่ระบบด้วย Google ได้"
+          : "ไม่สามารถเริ่มเข้าสู่ระบบด้วย GitHub ได้"
+      );
     }
   };
 
@@ -43,8 +50,9 @@ export default function LoginPage() {
       setMessage(null);
       setError(null);
       router.replace("/login");
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Unable to sign out");
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : err);
+      setError("ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง");
     }
   };
 
@@ -57,15 +65,16 @@ export default function LoginPage() {
     try {
       if (authMode === "sign-in") {
         await signInWithEmailPassword(email, password);
-        router.push("/");
+        router.push("/account");
       } else {
         await signUpWithEmailPassword(email, password);
-        setMessage("Account created. If email confirmation is enabled, confirm your email before signing in.");
+        setMessage("สร้างบัญชีเรียบร้อยแล้ว หากระบบเปิดยืนยันอีเมล กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ");
         setAuthMode("sign-in");
       }
       setPassword("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to continue with email.");
+      console.error(err instanceof Error ? err.message : err);
+      setError("ไม่สามารถดำเนินการด้วยอีเมลได้ กรุณาตรวจสอบข้อมูลและลองใหม่");
     } finally {
       setIsSubmitting(false);
     }
@@ -79,7 +88,7 @@ export default function LoginPage() {
           className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white transition mb-8"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Store
+          กลับไปหน้าร้าน
         </Link>
 
         <section className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl shadow-slate-200/50 dark:shadow-black/20">
@@ -88,9 +97,9 @@ export default function LoginPage() {
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-extrabold tracking-tight">Customer Sign In</h1>
+              <h1 className="text-xl font-extrabold tracking-tight">เข้าสู่ระบบลูกค้า</h1>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Continue to your Zenith account
+                เข้าสู่บัญชี Zenith ของคุณ
               </p>
             </div>
           </div>
@@ -103,7 +112,7 @@ export default function LoginPage() {
                 <ShieldCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-green-900 dark:text-green-200 truncate">
-                    Signed in as {displayName}
+                    เข้าสู่ระบบในชื่อ {displayName}
                   </p>
                   <p className="text-xs text-green-700/70 dark:text-green-300/70 truncate">
                     {user.email}
@@ -113,17 +122,17 @@ export default function LoginPage() {
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => router.push("/")}
+                  onClick={() => router.push("/account")}
                   className="flex-1 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold py-3 transition cursor-pointer"
                 >
-                  Continue
+                  ไปที่บัญชีของฉัน
                 </button>
                 <button
                   type="button"
                   onClick={handleSignOut}
                   className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-bold py-3 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
                 >
-                  Sign Out
+                  ออกจากระบบ
                 </button>
               </div>
             </div>
@@ -131,8 +140,8 @@ export default function LoginPage() {
             <div className="space-y-5">
               <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-950">
                 {[
-                  { value: "sign-in", label: "Sign In" },
-                  { value: "sign-up", label: "Create" },
+                  { value: "sign-in", label: "เข้าสู่ระบบ" },
+                  { value: "sign-up", label: "สร้างบัญชี" },
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -156,7 +165,7 @@ export default function LoginPage() {
               <form onSubmit={handleEmailSubmit} className="space-y-3">
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                    Email
+                    อีเมล
                   </span>
                   <input
                     type="email"
@@ -170,7 +179,7 @@ export default function LoginPage() {
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">
-                    Password
+                    รหัสผ่าน
                   </span>
                   <input
                     type="password"
@@ -179,7 +188,7 @@ export default function LoginPage() {
                     required
                     minLength={6}
                     autoComplete={authMode === "sign-in" ? "current-password" : "new-password"}
-                    placeholder="Enter password"
+                    placeholder="กรอกรหัสผ่าน"
                     className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                   />
                 </label>
@@ -189,7 +198,7 @@ export default function LoginPage() {
                   className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 py-3 text-sm font-bold text-white transition hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                  {authMode === "sign-in" ? "Sign in with Email" : "Create Customer Account"}
+                  {authMode === "sign-in" ? "เข้าสู่ระบบด้วยอีเมล" : "สร้างบัญชีลูกค้า"}
                 </button>
               </form>
 
@@ -206,17 +215,28 @@ export default function LoginPage() {
 
               <div className="flex items-center gap-3">
                 <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
-                <span className="text-xs font-bold uppercase tracking-wide text-slate-400">or</span>
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-400">หรือ</span>
                 <div className="h-px flex-1 bg-slate-200 dark:bg-slate-800" />
               </div>
 
               <button
                 type="button"
-                onClick={handleGitHubSignIn}
+                onClick={() => void handleOAuthLogin("google")}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white text-slate-900 text-sm font-bold py-3 hover:bg-slate-50 active:scale-[0.99] transition cursor-pointer dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:hover:bg-slate-900"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm font-black text-red-500">
+                  G
+                </span>
+                เข้าสู่ระบบด้วย Google
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleOAuthLogin("github")}
                 className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 dark:bg-white text-white dark:text-slate-950 text-sm font-bold py-3 hover:opacity-90 active:scale-[0.99] transition cursor-pointer"
               >
                 <UserCircle className="w-5 h-5" />
-                Continue with GitHub
+                เข้าสู่ระบบด้วย GitHub
               </button>
             </div>
           )}

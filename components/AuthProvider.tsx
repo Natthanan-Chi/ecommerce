@@ -11,13 +11,15 @@ import React, {
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 
+export type OAuthProvider = "github" | "google";
+
 interface AuthContextValue {
   isLoading: boolean;
   session: Session | null;
   user: User | null;
   displayName: string;
   avatarUrl: string | null;
-  signInWithGitHub: (options?: { next?: string }) => Promise<void>;
+  signInWithOAuth: (provider: OAuthProvider, options?: { next?: string }) => Promise<void>;
   signInWithEmailPassword: (email: string, password: string) => Promise<void>;
   signUpWithEmailPassword: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -80,17 +82,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signInWithGitHub = useCallback(async (options?: { next?: string }) => {
-    const next = options?.next;
+  const signInWithOAuth = useCallback(async (
+    provider: OAuthProvider,
+    options?: { next?: string }
+  ) => {
+    const next = options?.next ?? "/account";
     const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : null;
     const redirectTo = safeNext
       ? `${window.location.origin}/auth/callback?next=${encodeURIComponent(safeNext)}`
       : `${window.location.origin}/auth/callback`;
+
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: "github",
+      provider,
       options: {
         redirectTo,
-        scopes: "read:user user:email",
+        ...(provider === "github" ? { scopes: "read:user user:email" } : {}),
       },
     });
 
@@ -137,7 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       displayName: nameFromUser(user),
       avatarUrl: avatarFromUser(user),
-      signInWithGitHub,
+      signInWithOAuth,
       signInWithEmailPassword,
       signUpWithEmailPassword,
       signOut,
@@ -146,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       session,
       user,
-      signInWithGitHub,
+      signInWithOAuth,
       signInWithEmailPassword,
       signUpWithEmailPassword,
       signOut,

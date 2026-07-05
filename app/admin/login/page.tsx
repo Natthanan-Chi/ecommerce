@@ -31,7 +31,7 @@ export default function AdminLoginPage() {
     isLoading: isAuthLoading,
     user,
     displayName,
-    signInWithGitHub,
+    signInWithOAuth,
     signInWithEmailPassword,
     signOut,
   } = useAuth();
@@ -72,7 +72,7 @@ export default function AdminLoginPage() {
 
   const handleAdminSignIn = async () => {
     try {
-      await signInWithGitHub({ next: "/admin" });
+      await signInWithOAuth("github", { next: "/admin" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start admin sign in.");
     }
